@@ -1,26 +1,25 @@
 import { useState } from 'react';
-import { X, Headphones, Play, Pause, CheckCircle2 } from 'lucide-react';
+import { X, Play, Pause, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
-
-const options = [
-  { id: '1', text: 'I drink water', correct: false },
-  { id: '2', text: 'I eat sushi', correct: false },
-  { id: '3', text: 'I like dogs', correct: true },
-  { id: '4', text: 'I like cats', correct: false },
-];
+import { levelContent } from '../data/levels';
 
 export const ListeningLesson = () => {
   const navigate = useNavigate();
-  const { addXp } = useAppStore();
+  const { addXp, completeLesson, user } = useAppStore();
+
+  const listeningItems = levelContent[user.level].listening;
+  const [itemIndex, setItemIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  const currentItem = listeningItems[itemIndex];
+  const options = currentItem?.options ?? [];
+
   const toggleAudio = () => {
     setIsPlaying(!isPlaying);
-    // Simulate audio playing and stopping
     if (!isPlaying) {
       setTimeout(() => setIsPlaying(false), 2500);
     }
@@ -30,10 +29,19 @@ export const ListeningLesson = () => {
     if (!isSubmitted && selected) {
       setIsSubmitted(true);
     } else if (isSubmitted) {
-      addXp(15);
-      navigate('/learn');
+      if (itemIndex < listeningItems.length - 1) {
+        setItemIndex(i => i + 1);
+        setSelected(null);
+        setIsSubmitted(false);
+      } else {
+        addXp(15);
+        completeLesson();
+        navigate('/learn');
+      }
     }
   };
+
+  if (!currentItem) return null;
 
   return (
     <div className="flex flex-col h-full bg-brand-100 max-w-2xl mx-auto md:border-x border-brand-200/50 shadow-sm relative">
@@ -123,8 +131,8 @@ export const ListeningLesson = () => {
               animate={{ opacity: 1, y: 0 }}
               className="mt-8 bg-emerald-50 p-4 rounded-2xl border border-emerald-200 w-full max-w-sm"
             >
-              <p className="text-emerald-800 font-bold mb-1">犬が好きです。(Inu ga suki desu.)</p>
-              <p className="text-emerald-600 font-medium text-sm">I like dogs.</p>
+              <p className="text-emerald-800 font-bold mb-1">{currentItem.sentence} ({currentItem.romaji})</p>
+              <p className="text-emerald-600 font-medium text-sm">{currentItem.meaning}</p>
             </motion.div>
           )}
         </AnimatePresence>

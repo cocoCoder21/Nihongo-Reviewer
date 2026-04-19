@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Type, Pencil, Headphones, Mic, BookOpen } from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
 
 export const LearnHub = () => {
   const navigate = useNavigate();
+  const { user } = useAppStore();
 
   return (
     <div className="max-w-4xl mx-auto w-full p-4 md:p-8 space-y-8 pb-32">
@@ -11,10 +13,19 @@ export const LearnHub = () => {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-slate-800">Learning Hub</h1>
-        <p className="text-slate-500 font-medium mt-1">What would you like to practice today?</p>
+        <p className="text-slate-500 font-medium mt-1">JLPT {user.level} - What would you like to practice today?</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <SkillCard 
+          title="Vocabulary"
+          description="Build your word bank with flashcards and example sentences."
+          icon={<BookOpen className="w-8 h-8 text-emerald-600" />}
+          color="bg-emerald-50 border-emerald-200"
+          hoverColor="hover:bg-emerald-100 hover:border-emerald-300"
+          onClick={() => navigate('/learn/vocabulary')}
+        />
         
         <SkillCard 
           title="Grammar & Reading"

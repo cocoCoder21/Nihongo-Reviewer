@@ -4,19 +4,15 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-const weeklyData = [
-  { day: 'Mon', xp: 45 },
-  { day: 'Tue', xp: 50 },
-  { day: 'Wed', xp: 30 },
-  { day: 'Thu', xp: 60 },
-  { day: 'Fri', xp: 40 },
-  { day: 'Sat', xp: 0 },
-  { day: 'Sun', xp: 20 },
-];
-
 export const Dashboard = () => {
-  const { user, stats, progress } = useAppStore();
+  const { user, stats, progress, weeklyActivity, dailyQuests } = useAppStore();
   const navigate = useNavigate();
+
+  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const safeWeekly = weeklyActivity ?? [];
+  const weeklyData = safeWeekly.length > 0
+    ? safeWeekly.map((entry, i) => ({ day: dayLabels[i] ?? entry.day, xp: entry.xp }))
+    : dayLabels.map(day => ({ day, xp: 0 }));
 
   return (
     <div className="max-w-4xl mx-auto w-full p-4 md:p-8 space-y-8 pb-32 md:pb-8">
@@ -126,9 +122,21 @@ export const Dashboard = () => {
               Daily Quests
             </h3>
             <div className="space-y-4">
-              <QuestItem title="Earn 50 XP" current={stats.xp} max={stats.xpGoal} reward={10} icon={<Zap className="w-4 h-4 text-yellow-500" />} />
-              <QuestItem title="Learn 5 New Kanji" current={2} max={5} reward={15} icon={<BrainCircuit className="w-4 h-4 text-red-500" />} />
-              <QuestItem title="Complete a Lesson" current={0} max={1} reward={20} icon={<BookOpen className="w-4 h-4 text-blue-500" />} />
+              {(dailyQuests ?? []).map((quest) => (
+                <QuestItem 
+                  key={quest.id}
+                  title={quest.title} 
+                  current={quest.current} 
+                  max={quest.max} 
+                  reward={quest.reward} 
+                  icon={
+                    quest.icon === 'xp' ? <Zap className="w-4 h-4 text-yellow-500" /> :
+                    quest.icon === 'review' ? <BrainCircuit className="w-4 h-4 text-red-500" /> :
+                    quest.icon === 'kanji' ? <BrainCircuit className="w-4 h-4 text-red-500" /> :
+                    <BookOpen className="w-4 h-4 text-blue-500" />
+                  } 
+                />
+              ))}
             </div>
           </div>
 

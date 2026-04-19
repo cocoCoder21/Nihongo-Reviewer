@@ -6,6 +6,9 @@ import { GrammarLesson } from "./pages/GrammarLesson";
 import { WritingLesson } from "./pages/WritingLesson";
 import { ListeningLesson } from "./pages/ListeningLesson";
 import { SpeakingLesson } from "./pages/SpeakingLesson";
+import { VocabularyLesson } from "./pages/VocabularyLesson";
+import { Quiz } from "./pages/Quiz";
+import { LevelSelect } from "./pages/LevelSelect";
 import { Practice } from "./pages/Practice";
 import { Planner } from "./pages/Planner";
 import { Profile } from "./pages/Profile";
@@ -20,9 +23,12 @@ export const router = createBrowserRouter([
       { path: "practice", Component: Practice },
       { path: "planner", Component: Planner },
       { path: "profile", Component: Profile },
+      { path: "levels", Component: LevelSelect },
+      { path: "quiz", Component: Quiz },
     ],
   },
   { path: "/learn/grammar", Component: GrammarLesson },
+  { path: "/learn/vocabulary", Component: VocabularyLesson },
   { path: "/learn/writing", Component: WritingLesson },
   { path: "/learn/listening", Component: ListeningLesson },
   { path: "/learn/speaking", Component: SpeakingLesson },

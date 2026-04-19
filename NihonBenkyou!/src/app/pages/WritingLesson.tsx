@@ -1,16 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Eraser, CheckCircle2 } from 'lucide-react';
+import { X, Eraser, CheckCircle2, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAppStore } from '../store/useAppStore';
+import { levelContent } from '../data/levels';
 
 export const WritingLesson = () => {
   const navigate = useNavigate();
-  const { addXp } = useAppStore();
+  const { addXp, completeLesson, user } = useAppStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [kanjiIndex, setKanjiIndex] = useState(0);
+
+  const kanjiList = levelContent[user.level].kanji;
+  const currentKanji = kanjiList[kanjiIndex];
 
   useEffect(() => {
+    resetCanvas();
+  }, [kanjiIndex]);
+
+  const resetCanvas = () => {
     const canvas = canvasRef.current;
     if (canvas) {
       canvas.width = canvas.offsetWidth;
@@ -23,6 +32,10 @@ export const WritingLesson = () => {
         ctx.strokeStyle = '#1e293b';
       }
     }
+  };
+
+  useEffect(() => {
+    resetCanvas();
   }, []);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -68,21 +81,26 @@ export const WritingLesson = () => {
   };
 
   const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    resetCanvas();
   };
 
   const handleSubmit = () => {
     if (!isSubmitted) {
       setIsSubmitted(true);
     } else {
-      addXp(15);
-      navigate('/learn');
+      // Move to next kanji or finish
+      if (kanjiIndex < kanjiList.length - 1) {
+        setKanjiIndex(i => i + 1);
+        setIsSubmitted(false);
+      } else {
+        addXp(15);
+        completeLesson();
+        navigate('/learn');
+      }
     }
   };
+
+  if (!currentKanji) return null;
 
   return (
     <div className="flex flex-col h-full bg-brand-100 max-w-2xl mx-auto md:border-x border-brand-200/50 shadow-sm relative overscroll-none touch-none">
@@ -93,7 +111,7 @@ export const WritingLesson = () => {
         </button>
         <div className="flex-1 px-8">
           <div className="h-2.5 w-full bg-brand-200 rounded-full overflow-hidden">
-            <div className="h-full bg-brand-500 rounded-full" style={{ width: '50%' }} />
+            <div className="h-full bg-brand-500 rounded-full" style={{ width: `${((kanjiIndex + 1) / kanjiList.length) * 100}%` }} />
           </div>
         </div>
       </header>
@@ -107,8 +125,8 @@ export const WritingLesson = () => {
           </div>
         </div>
 
-        <h2 className="text-2xl font-black text-center text-slate-800 mb-2">Draw the Kanji for "Water"</h2>
-        <p className="text-slate-500 font-medium mb-8">mizu / みず</p>
+        <h2 className="text-2xl font-black text-center text-slate-800 mb-2">Draw the Kanji for "{currentKanji.meaning}"</h2>
+        <p className="text-slate-500 font-medium mb-8">{currentKanji.reading}</p>
 
         <div className="relative w-full max-w-sm aspect-square bg-white rounded-3xl shadow-sm border-2 border-brand-200/50 overflow-hidden">
           
@@ -136,7 +154,7 @@ export const WritingLesson = () => {
                  <CheckCircle2 className="w-10 h-10" />
                </div>
                <h3 className="text-2xl font-black text-slate-800">Perfect!</h3>
-               <p className="text-slate-600 font-medium mt-1 text-8xl font-serif text-slate-300 pointer-events-none absolute -z-10">水</p>
+               <p className="text-slate-600 font-medium mt-1 text-8xl font-serif text-slate-300 pointer-events-none absolute -z-10">{currentKanji.kanji}</p>
              </div>
           )}
 

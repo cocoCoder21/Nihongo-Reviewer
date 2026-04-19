@@ -1,6 +1,9 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { type JLPTLevel, levelContent } from '../data/levels';
 
 export type CardCategory = 'vocabulary' | 'grammar' | 'kanji' | 'particle';
+export type Difficulty = 'again' | 'hard' | 'good' | 'easy';
 
 export interface Card {
   id: string;
@@ -8,38 +11,218 @@ export interface Card {
   reading: string;
   meaning: string;
   category: CardCategory;
-  interval: number;
-  ease: number;
+  interval: number;   // days until next review
+  ease: number;        // ease factor (default 2.5)
+  repetitions: number; // number of successful reviews
+  nextReview: number;  // timestamp
+  level: JLPTLevel;
+}
+
+interface SessionStats {
+  total: number;
+  correct: number;
+  again: number;
+  hard: number;
+  good: number;
+  easy: number;
 }
 
 interface FlashcardStore {
-  cards: Card[];
+  allCards: Card[];
+  sessionCards: Card[];
   currentIndex: number;
   isFlipped: boolean;
+  sessionStats: SessionStats;
+  isSessionComplete: boolean;
+  loadDeck: (level: JLPTLevel) => void;
+  startReview: (level: JLPTLevel) => void;
   flipCard: () => void;
   resetCard: () => void;
-  answerCard: (difficulty: 'again' | 'hard' | 'good' | 'easy') => void;
+  answerCard: (difficulty: Difficulty) => void;
+  resetSession: () => void;
 }
 
-const initialCards: Card[] = [
-  { id: '1', front: '食べる', reading: 'たべる (taberu)', meaning: 'to eat', category: 'vocabulary', interval: 1, ease: 2.5 },
-  { id: '2', front: 'から', reading: 'kara', meaning: 'because / from', category: 'particle', interval: 1, ease: 2.5 },
-  { id: '3', front: '水', reading: 'みず (mizu)', meaning: 'water', category: 'kanji', interval: 1, ease: 2.5 },
-  { id: '4', front: '〜なければならない', reading: '~nakereba naranai', meaning: 'must do / have to do', category: 'grammar', interval: 1, ease: 2.5 },
-];
+function buildCardsForLevel(level: JLPTLevel): Card[] {
+  const content = levelContent[level];
+  const now = Date.now();
+  const cards: Card[] = [];
 
-export const useFlashcardStore = create<FlashcardStore>((set) => ({
-  cards: initialCards,
-  currentIndex: 0,
-  isFlipped: false,
-  flipCard: () => set({ isFlipped: true }),
-  resetCard: () => set({ isFlipped: false }),
-  answerCard: (difficulty) => set((state) => {
-    const nextIndex = state.currentIndex + 1;
-    // Real SRS interval calculations would happen here.
-    return {
+  for (const v of content.vocabulary) {
+    cards.push({
+      id: `${level}-v-${v.id}`,
+      front: v.word,
+      reading: v.reading,
+      meaning: v.meaning,
+      category: 'vocabulary',
+      interval: 0,
+      ease: 2.5,
+      repetitions: 0,
+      nextReview: now,
+      level,
+    });
+  }
+
+  for (const g of content.grammar) {
+    cards.push({
+      id: `${level}-g-${g.id}`,
+      front: g.title,
+      reading: g.exampleRomaji,
+      meaning: g.rule,
+      category: 'grammar',
+      interval: 0,
+      ease: 2.5,
+      repetitions: 0,
+      nextReview: now,
+      level,
+    });
+  }
+
+  for (const k of content.kanji) {
+    cards.push({
+      id: `${level}-k-${k.id}`,
+      front: k.kanji,
+      reading: k.reading,
+      meaning: k.meaning,
+      category: 'kanji',
+      interval: 0,
+      ease: 2.5,
+      repetitions: 0,
+      nextReview: now,
+      level,
+    });
+  }
+
+  return cards;
+}
+
+// SM-2 algorithm implementation
+function calculateSRS(card: Card, difficulty: Difficulty): Partial<Card> {
+  let { ease, interval, repetitions } = card;
+
+  const qualityMap: Record<Difficulty, number> = {
+    again: 0,
+    hard: 2,
+    good: 3,
+    easy: 5,
+  };
+  const quality = qualityMap[difficulty];
+
+  if (quality < 3) {
+    // Failed — reset
+    repetitions = 0;
+    interval = 0;
+  } else {
+    if (repetitions === 0) {
+      interval = 1;
+    } else if (repetitions === 1) {
+      interval = 6;
+    } else {
+      interval = Math.round(interval * ease);
+    }
+    repetitions += 1;
+  }
+
+  // Update ease factor (minimum 1.3)
+  ease = Math.max(1.3, ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
+
+  const nextReview = Date.now() + interval * 24 * 60 * 60 * 1000;
+
+  return { ease, interval, repetitions, nextReview };
+}
+
+export const useFlashcardStore = create<FlashcardStore>()(
+  persist(
+    (set, get) => ({
+      allCards: [],
+      sessionCards: [],
+      currentIndex: 0,
       isFlipped: false,
-      currentIndex: nextIndex < state.cards.length ? nextIndex : 0,
-    };
-  }),
-}));
+      isSessionComplete: false,
+      sessionStats: { total: 0, correct: 0, again: 0, hard: 0, good: 0, easy: 0 },
+
+      loadDeck: (level) => {
+        const existing = get().allCards.filter(c => c.level === level);
+        if (existing.length > 0) return;
+        const newCards = buildCardsForLevel(level);
+        set((state) => ({
+          allCards: [...state.allCards, ...newCards],
+        }));
+      },
+
+      startReview: (level) => {
+        const state = get();
+        // Ensure deck is loaded
+        let allCards = state.allCards;
+        const hasLevel = allCards.some(c => c.level === level);
+        if (!hasLevel) {
+          const newCards = buildCardsForLevel(level);
+          allCards = [...allCards, ...newCards];
+        }
+
+        const now = Date.now();
+        const dueCards = allCards
+          .filter(c => c.level === level && c.nextReview <= now)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 20); // max 20 cards per session
+
+        set({
+          allCards,
+          sessionCards: dueCards.length > 0 ? dueCards : allCards.filter(c => c.level === level).slice(0, 10),
+          currentIndex: 0,
+          isFlipped: false,
+          isSessionComplete: false,
+          sessionStats: { total: 0, correct: 0, again: 0, hard: 0, good: 0, easy: 0 },
+        });
+      },
+
+      flipCard: () => set({ isFlipped: true }),
+      resetCard: () => set({ isFlipped: false }),
+
+      answerCard: (difficulty) => set((state) => {
+        const currentCard = state.sessionCards[state.currentIndex];
+        if (!currentCard) return state;
+
+        const srsUpdate = calculateSRS(currentCard, difficulty);
+        const updatedCard = { ...currentCard, ...srsUpdate };
+
+        // Update in allCards
+        const allCards = state.allCards.map(c =>
+          c.id === updatedCard.id ? updatedCard : c
+        );
+
+        // Update session stats
+        const sessionStats = {
+          ...state.sessionStats,
+          total: state.sessionStats.total + 1,
+          correct: difficulty !== 'again' ? state.sessionStats.correct + 1 : state.sessionStats.correct,
+          [difficulty]: state.sessionStats[difficulty] + 1,
+        };
+
+        const nextIndex = state.currentIndex + 1;
+        const isComplete = nextIndex >= state.sessionCards.length;
+
+        return {
+          allCards,
+          isFlipped: false,
+          currentIndex: isComplete ? state.currentIndex : nextIndex,
+          isSessionComplete: isComplete,
+          sessionStats,
+        };
+      }),
+
+      resetSession: () => set({
+        sessionCards: [],
+        currentIndex: 0,
+        isFlipped: false,
+        isSessionComplete: false,
+        sessionStats: { total: 0, correct: 0, again: 0, hard: 0, good: 0, easy: 0 },
+      }),
+    }),
+    {
+      name: 'nihon-benkyou-flashcards',
+      partialize: (state) => ({
+        allCards: state.allCards,
+      }),
+    }
+  )
+);

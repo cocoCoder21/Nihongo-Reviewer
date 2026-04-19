@@ -3,38 +3,27 @@ import { X, Volume2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
-
-const lessons = [
-  {
-    id: 1,
-    type: 'grammar',
-    title: 'て-form (Te-form)',
-    rule: 'For verbs ending in う, つ, or る (u, tsu, ru), drop the ending and add って (tte).',
-    example: '買う (kau)',
-    exampleConverted: '買って',
-    exampleRomaji: 'katte',
-    exampleMeaning: 'to buy',
-    sentence: '私は本を買って、読みました。',
-    sentenceRomaji: 'Watashi wa hon o katte, yomimashita.',
-    sentenceMeaning: 'I bought a book and read it.',
-  }
-];
+import { levelContent } from '../data/levels';
 
 export const GrammarLesson = () => {
   const navigate = useNavigate();
-  const { addXp } = useAppStore();
+  const { addXp, completeLesson, user } = useAppStore();
   const [step, setStep] = useState(0);
 
-  const currentLesson = lessons[step];
+  const lessons = levelContent[user.level].grammar;
 
   const handleContinue = () => {
     if (step < lessons.length - 1) {
       setStep(s => s + 1);
     } else {
       addXp(15);
+      completeLesson();
       navigate('/learn');
     }
   };
+
+  const currentLesson = lessons[step];
+  if (!currentLesson) return null;
 
   return (
     <div className="flex flex-col h-full bg-brand-100 max-w-2xl mx-auto md:border-x border-brand-200/50 shadow-sm relative">
