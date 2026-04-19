@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-100: #F9F9F9; /* Very light background tint */
+  --color-brand-200: #E6E6E6; /* Light Grey from palette */
+  --color-brand-500: #EA7359; /* Coral from palette */
+  --color-brand-600: #D8634B; /* Darker Coral */
+  --color-brand-700: #C03939; /* Deep Red from palette */
+  --color-brand-800: #A82C2C; /* Even deeper red */
+}
+
+/*
+  Base styles
+*/
+@layer base {
+  body {
+    @apply bg-brand-100 text-slate-900;
+  }
+}
