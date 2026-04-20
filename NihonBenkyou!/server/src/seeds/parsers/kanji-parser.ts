@@ -13,6 +13,7 @@ export interface ParsedKanji {
   meanings: string;
   mnemonic: string;
   radicalName: string;
+  category: string;
   vocabulary: ParsedKanjiVocab[];
   examples: { japanese: string; english: string }[];
 }
@@ -26,6 +27,7 @@ export function parseKanjiFile(filePath: string): ParsedKanji[] {
   const kanjiList: ParsedKanji[] = [];
   let current: Partial<ParsedKanji> | null = null;
   let collectingVocab = false;
+  let currentCategory = '';
 
   const flush = () => {
     if (current?.character) {
@@ -36,6 +38,7 @@ export function parseKanjiFile(filePath: string): ParsedKanji[] {
         meanings: current.meanings || '',
         mnemonic: current.mnemonic || '',
         radicalName: current.radicalName || '',
+        category: current.category || '',
         vocabulary: current.vocabulary || [],
         examples: current.examples || [],
       });
@@ -47,6 +50,14 @@ export function parseKanjiFile(filePath: string): ParsedKanji[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
+    // Section heading: ## Section N: Category Name — Japanese (...)
+    // e.g. "## Section 1: Numbers — 数字（すうじ）"
+    const sectionMatch = line.match(/^##\s+Section\s+\d+:\s*(.+?)(?:\s*[—–-]\s*.+)?$/);
+    if (sectionMatch) {
+      currentCategory = sectionMatch[1].trim();
+      continue;
+    }
+
     // Kanji heading: ### 漢字 — Meaning
     const kanjiMatch = line.match(/^###\s+(\S)\s*[—–-]\s*(.+)/);
     if (kanjiMatch && kanjiMatch[1].length === 1) {
@@ -54,6 +65,7 @@ export function parseKanjiFile(filePath: string): ParsedKanji[] {
       current = {
         character: kanjiMatch[1],
         meanings: kanjiMatch[2].trim(),
+        category: currentCategory,
         onyomi: '',
         kunyomi: '',
         mnemonic: '',

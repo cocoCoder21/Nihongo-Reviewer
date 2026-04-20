@@ -1,4 +1,5 @@
 import { readFileSync } from 'fs';
+import { extractParticles } from './shokyu-lesson-parser.js';
 
 export interface ParsedChukyuVocab {
   word: string;
@@ -16,6 +17,7 @@ export interface ParsedChukyuGrammar {
   rule: string;
   examples: { japanese: string; english: string }[];
   crossReference: string;
+  particles: string[];
   sortOrder: number;
 }
 
@@ -129,13 +131,15 @@ function parseChukyuGrammar(lines: string[]): ParsedChukyuGrammar[] {
 
   const flush = () => {
     if (current?.pattern) {
+      const pat = current.pattern || '';
       grammar.push({
-        pattern: current.pattern || '',
+        pattern: pat,
         meaning: current.meaning || '',
         formation: current.formation || '',
         rule: (current.rule || ruleLines.join('\n')).trim(),
         examples: current.examples || [],
         crossReference: current.crossReference || '',
+        particles: extractParticles(pat),
         sortOrder: sortOrder++,
       });
     }
