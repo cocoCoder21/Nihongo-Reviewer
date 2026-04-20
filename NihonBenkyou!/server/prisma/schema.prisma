@@ -1,0 +1,601 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────
+
+enum UserType {
+  STUDENT
+  PROFESSIONAL
+}
+
+enum RadicalPosition {
+  HEN
+  TSUKURI
+  KANMURI
+  ASHI
+  TARE
+  NYOU
+  KAMAE
+}
+
+enum KanaRow {
+  A
+  KA
+  SA
+  TA
+  NA
+  HA
+  MA
+  YA
+  RA
+  WA
+  N
+}
+
+enum HiraganaType {
+  SEION
+  DAKUON
+  HANDAKUON
+  YOUON
+}
+
+enum KatakanaType {
+  SEION
+  DAKUON
+  HANDAKUON
+  YOUON
+  GAIRAIGO
+}
+
+enum ContentTypeEnum {
+  SHOKYU
+  CHUKYU
+}
+
+enum QuizContentType {
+  VOCAB_MEANING
+  GRAMMAR_FILL
+  KANJI_READING
+  TRANSLATION
+}
+
+enum SrsContentType {
+  VOCABULARY
+  GRAMMAR
+  KANJI
+  HIRAGANA
+  KATAKANA
+}
+
+enum SrsStatus {
+  NEW
+  LEARNING
+  REVIEW
+  MASTERED
+}
+
+enum StudySessionType {
+  LESSON
+  REVIEW
+  QUIZ
+  FLASHCARD
+  POMODORO
+}
+
+// ─── Book & Level Structure ───────────────────────────────────────
+
+model JlptLevel {
+  id          String @id // N5, N4, N3, N2, N1
+  label       String // e.g. "JLPT N5 — Beginner"
+  description String
+  order       Int    @unique // 5, 4, 3, 2, 1
+
+  books        Book[]
+  kanji        Kanji[]
+  grammar      Grammar[]
+  vocabulary   Vocabulary[]
+  quizzes      QuizQuestion[]
+  userProgress UserProgress[]
+}
+
+model Book {
+  id           String @id @default(cuid())
+  name         String @unique // shokyu_1, shokyu_2, chukyu_1, chukyu_2
+  displayName  String // "Minna no Nihongo Shokyu I"
+  jlptLevelId  String
+  totalLessons Int
+
+  jlptLevel      JlptLevel       @relation(fields: [jlptLevelId], references: [id])
+  shokyuLessons  ShokyuLesson[]
+  chukyuLessons  ChukyuLesson[]
+  audioTracks    AudioTrack[]
+
+  @@index([jlptLevelId])
+}
+
+// ─── Shokyu Tables (N5/N4) ───────────────────────────────────────
+
+model ShokyuLesson {
+  id           Int    @id @default(autoincrement())
+  bookId       String
+  lessonNumber Int
+  title        String
+
+  book       Book               @relation(fields: [bookId], references: [id])
+  vocabulary ShokyuVocabulary[]
+  grammar    ShokyuGrammar[]
+
+  @@unique([bookId, lessonNumber])
+  @@index([bookId])
+}
+
+model ShokyuVocabulary {
+  id             Int     @id @default(autoincrement())
+  lessonId       Int
+  word           String
+  reading        String
+  meaning        String
+  example        String  @default("")
+  exampleMeaning String  @default("")
+  category       String  @default("")
+  sortOrder      Int     @default(0)
+
+  lesson ShokyuLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+model ShokyuGrammar {
+  id        Int    @id @default(autoincrement())
+  lessonId  Int
+  pattern   String
+  meaning   String @default("")
+  formation String @default("")
+  rule      String
+  examples  Json   @default("[]") // [{japanese, english}]
+  sortOrder Int    @default(0)
+
+  lesson ShokyuLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+// ─── Chukyu Tables (N3/N2) ───────────────────────────────────────
+
+model ChukyuLesson {
+  id           Int    @id @default(autoincrement())
+  bookId       String
+  lessonNumber Int
+  title        String
+
+  book       Book               @relation(fields: [bookId], references: [id])
+  vocabulary ChukyuVocabulary[]
+  grammar    ChukyuGrammar[]
+
+  @@unique([bookId, lessonNumber])
+  @@index([bookId])
+}
+
+model ChukyuVocabulary {
+  id                Int     @id @default(autoincrement())
+  lessonId          Int
+  word              String
+  reading           String
+  meaning           String
+  example           String  @default("")
+  exampleMeaning    String  @default("")
+  category          String  @default("")
+  usefulExpressions Json    @default("[]")
+  sortOrder         Int     @default(0)
+
+  lesson ChukyuLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+model ChukyuGrammar {
+  id             Int     @id @default(autoincrement())
+  lessonId       Int
+  pattern        String
+  meaning        String  @default("")
+  formation      String  @default("")
+  rule           String
+  examples       Json    @default("[]") // [{japanese, english}]
+  crossReference String? // link to shokyu grammar
+  sortOrder      Int     @default(0)
+
+  lesson ChukyuLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+// ─── Kanji Tables (N5–N1) ────────────────────────────────────────
+
+model Kanji {
+  id           Int     @id @default(autoincrement())
+  jlptLevelId  String
+  character    String
+  onyomi       String  @default("")
+  kunyomi      String  @default("")
+  meanings     String  // comma-separated or primary meaning
+  strokeCount  Int     @default(0)
+  mnemonic     String  @default("")
+  radicalId    Int?
+  radicalGroup String  @default("")
+
+  jlptLevel      JlptLevel        @relation(fields: [jlptLevelId], references: [id])
+  radical        Radical?         @relation(fields: [radicalId], references: [id])
+  vocabulary     KanjiVocabulary[]
+  examples       KanjiExample[]
+  kanjiProgress  KanjiProgress[]
+
+  @@unique([jlptLevelId, character])
+  @@index([jlptLevelId])
+  @@index([radicalId])
+}
+
+model KanjiVocabulary {
+  id      Int    @id @default(autoincrement())
+  kanjiId Int
+  word    String
+  reading String
+  meaning String
+
+  kanji Kanji @relation(fields: [kanjiId], references: [id], onDelete: Cascade)
+
+  @@index([kanjiId])
+}
+
+model KanjiExample {
+  id       Int    @id @default(autoincrement())
+  kanjiId  Int
+  japanese String
+  english  String
+
+  kanji Kanji @relation(fields: [kanjiId], references: [id], onDelete: Cascade)
+
+  @@index([kanjiId])
+}
+
+// ─── Radical Table ────────────────────────────────────────────────
+
+model Radical {
+  id               Int             @id @default(autoincrement())
+  character        String          @unique
+  name             String
+  meaning          String
+  position         RadicalPosition
+  commonKanji      Json            @default("[]") // string[]
+  semanticCategory String          @default("")
+  sortOrder        Int             @default(0)
+
+  kanji Kanji[]
+}
+
+// ─── Kana Tables ──────────────────────────────────────────────────
+
+model Hiragana {
+  id             Int          @id @default(autoincrement())
+  character      String       @unique
+  romaji         String
+  row            KanaRow
+  type           HiraganaType
+  baseCharacterId Int?
+  strokeCount    Int          @default(0)
+  mnemonic       String       @default("")
+  exampleWord    String       @default("")
+  exampleReading String       @default("")
+  exampleMeaning String       @default("")
+  sortOrder      Int          @default(0)
+
+  baseCharacter Hiragana?  @relation("HiraganaVariants", fields: [baseCharacterId], references: [id])
+  variants      Hiragana[] @relation("HiraganaVariants")
+}
+
+model Katakana {
+  id             Int          @id @default(autoincrement())
+  character      String       @unique
+  romaji         String
+  row            KanaRow
+  type           KatakanaType
+  baseCharacterId Int?
+  strokeCount    Int          @default(0)
+  mnemonic       String       @default("")
+  exampleWord    String       @default("")
+  exampleReading String       @default("")
+  exampleMeaning String       @default("")
+  sortOrder      Int          @default(0)
+
+  baseCharacter Katakana?  @relation("KatakanaVariants", fields: [baseCharacterId], references: [id])
+  variants      Katakana[] @relation("KatakanaVariants")
+}
+
+// ─── Standalone Grammar & Vocabulary (unified cross-level) ───────
+
+model Grammar {
+  id                 Int    @id @default(autoincrement())
+  jlptLevelId        String
+  pattern            String
+  meaning            String @default("")
+  formation          String @default("")
+  rule               String
+  examples           Json   @default("[]") // [{japanese, english}]
+  sourceBook         String @default("")   // shokyu_1, shokyu_2, etc.
+  sourceLessonNumber Int    @default(0)
+
+  jlptLevel       JlptLevel         @relation(fields: [jlptLevelId], references: [id])
+  grammarProgress GrammarProgress[]
+
+  @@index([jlptLevelId])
+  @@index([sourceBook, sourceLessonNumber])
+}
+
+model Vocabulary {
+  id                 Int    @id @default(autoincrement())
+  jlptLevelId        String
+  word               String
+  reading            String
+  meaning            String
+  example            String @default("")
+  exampleMeaning     String @default("")
+  category           String @default("")
+  sourceBook         String @default("")
+  sourceLessonNumber Int    @default(0)
+
+  jlptLevel          JlptLevel           @relation(fields: [jlptLevelId], references: [id])
+  vocabularyProgress VocabularyProgress[]
+
+  @@index([jlptLevelId])
+  @@index([sourceBook, sourceLessonNumber])
+}
+
+// ─── Audio ────────────────────────────────────────────────────────
+
+model AudioTrack {
+  id           Int    @id @default(autoincrement())
+  bookId       String
+  lessonNumber Int
+  trackNumber  Int
+  filePath     String
+  fileName     String
+
+  book Book @relation(fields: [bookId], references: [id])
+
+  @@unique([bookId, lessonNumber, trackNumber])
+  @@index([bookId, lessonNumber])
+}
+
+// ─── Quiz ─────────────────────────────────────────────────────────
+
+model QuizQuestion {
+  id            Int              @id @default(autoincrement())
+  jlptLevelId   String
+  lessonNumber  Int?
+  type          QuizContentType
+  contentType   ContentTypeEnum?
+  contentId     Int?
+  question      String
+  options       Json             // string[]
+  correctAnswer Int              // index into options
+  explanation   String           @default("")
+
+  jlptLevel JlptLevel @relation(fields: [jlptLevelId], references: [id])
+
+  @@index([jlptLevelId])
+  @@index([jlptLevelId, lessonNumber])
+}
+
+// ─── User & Auth ──────────────────────────────────────────────────
+
+model User {
+  id               Int      @id @default(autoincrement())
+  email            String   @unique
+  passwordHash     String
+  displayName      String
+  currentJlptLevel String   @default("N5")
+  userType         UserType @default(STUDENT)
+  dailyGoalMinutes Int      @default(30)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  settings           UserSettings?
+  progress           UserProgress[]
+  lessonProgress     LessonProgress[]
+  vocabularyProgress VocabularyProgress[]
+  grammarProgress    GrammarProgress[]
+  kanjiProgress      KanjiProgress[]
+  srsCards           SrsCard[]
+  studySessions      StudySession[]
+  streak             UserStreak?
+  dailyActivity      DailyActivity[]
+  studyBlocks        StudyBlock[]
+}
+
+model UserSettings {
+  id                 Int     @id @default(autoincrement())
+  userId             Int     @unique
+  showRomaji         Boolean @default(false)
+  autoPlayAudio      Boolean @default(true)
+  darkMode           Boolean @default(false)
+  preferredStudyTime String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Progress Tracking ────────────────────────────────────────────
+
+model UserProgress {
+  id               Int    @id @default(autoincrement())
+  userId           Int
+  jlptLevelId      String
+  overallMastery   Float  @default(0)
+  lessonsCompleted Int    @default(0)
+  totalLessons     Int    @default(0)
+  vocabMastered    Int    @default(0)
+  grammarMastered  Int    @default(0)
+  kanjiMastered    Int    @default(0)
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jlptLevel JlptLevel @relation(fields: [jlptLevelId], references: [id])
+
+  @@unique([userId, jlptLevelId])
+  @@index([userId])
+}
+
+model LessonProgress {
+  id          Int              @id @default(autoincrement())
+  userId      Int
+  contentType ContentTypeEnum
+  lessonId    Int
+  completed   Boolean          @default(false)
+  score       Float            @default(0)
+  completedAt DateTime?
+  attempts    Int              @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentType, lessonId])
+  @@index([userId])
+}
+
+model VocabularyProgress {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  vocabularyId Int
+  correct      Int       @default(0)
+  incorrect    Int       @default(0)
+  lastReviewed DateTime?
+  mastered     Boolean   @default(false)
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, vocabularyId])
+  @@index([userId])
+}
+
+model GrammarProgress {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  grammarId    Int
+  correct      Int       @default(0)
+  incorrect    Int       @default(0)
+  lastReviewed DateTime?
+  mastered     Boolean   @default(false)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grammar Grammar @relation(fields: [grammarId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, grammarId])
+  @@index([userId])
+}
+
+model KanjiProgress {
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  kanjiId          Int
+  correct          Int       @default(0)
+  incorrect        Int       @default(0)
+  lastReviewed     DateTime?
+  mastered         Boolean   @default(false)
+  writingPracticed Boolean   @default(false)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kanji Kanji @relation(fields: [kanjiId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kanjiId])
+  @@index([userId])
+}
+
+// ─── SRS System ───────────────────────────────────────────────────
+
+model SrsCard {
+  id          Int            @id @default(autoincrement())
+  userId      Int
+  contentType SrsContentType
+  contentId   Int
+  easeFactor  Float          @default(2.5)
+  interval    Int            @default(0)
+  repetitions Int            @default(0)
+  nextReview  DateTime       @default(now())
+  lastReview  DateTime?
+  status      SrsStatus      @default(NEW)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentType, contentId])
+  @@index([userId, nextReview])
+  @@index([userId, status])
+}
+
+// ─── Study Sessions & Streaks ─────────────────────────────────────
+
+model StudySession {
+  id           Int              @id @default(autoincrement())
+  userId       Int
+  startedAt    DateTime         @default(now())
+  endedAt      DateTime?
+  type         StudySessionType
+  xpEarned     Int              @default(0)
+  itemsStudied Int              @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, startedAt])
+}
+
+model UserStreak {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @unique
+  currentStreak Int      @default(0)
+  longestStreak Int      @default(0)
+  lastStudyDate DateTime?
+  totalStudyDays Int     @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyActivity {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  date             DateTime @db.Date
+  xpEarned         Int      @default(0)
+  minutesStudied   Int      @default(0)
+  lessonsCompleted Int      @default(0)
+  reviewsCompleted Int      @default(0)
+  quizzesCompleted Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([userId, date])
+}
+
+// ─── Planner / Study Blocks ──────────────────────────────────────
+
+model StudyBlock {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  title       String
+  scheduledAt String   // time like "08:00 AM"
+  duration    Int      // minutes
+  completed   Boolean  @default(false)
+  date        DateTime @db.Date
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
