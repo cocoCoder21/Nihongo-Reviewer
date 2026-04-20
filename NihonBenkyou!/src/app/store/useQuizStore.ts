@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { type JLPTLevel, type QuizQuestion, generateQuiz } from '../data/levels';
+import { contentService } from '../services/content.service';
 
 interface QuizStore {
   questions: QuizQuestion[];
@@ -10,6 +11,7 @@ interface QuizStore {
   isComplete: boolean;
   answers: (number | null)[];
   startQuiz: (level: JLPTLevel, count?: number) => void;
+  startApiQuiz: (lessonId: number, count?: number) => Promise<void>;
   selectAnswer: (index: number) => void;
   submitAnswer: () => void;
   nextQuestion: () => void;
@@ -81,4 +83,21 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     isComplete: false,
     answers: [],
   }),
+
+  startApiQuiz: async (lessonId, count = 10) => {
+    try {
+      const questions = await contentService.getQuiz(lessonId, count);
+      set({
+        questions,
+        currentIndex: 0,
+        selectedAnswer: null,
+        isSubmitted: false,
+        score: 0,
+        isComplete: false,
+        answers: new Array(questions.length).fill(null),
+      });
+    } catch {
+      // Fallback: API unavailable, quiz won't start — caller can use startQuiz instead
+    }
+  },
 }));

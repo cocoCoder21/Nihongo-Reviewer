@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type JLPTLevel, levelInfo } from '../data/levels';
+import { progressService } from '../services/progress.service';
 
 export type UserType = 'student' | 'professional';
 
@@ -27,6 +28,12 @@ interface WeeklyActivity {
   xp: number;
 }
 
+interface SrsBreakdown {
+  kanjiDue: number;
+  vocabDue: number;
+  grammarDue: number;
+}
+
 interface AppState {
   user: {
     name: string;
@@ -43,6 +50,7 @@ interface AppState {
     lessonsCompleted: number;
     quizzesCompleted: number;
   };
+  srsBreakdown: SrsBreakdown;
   progress: {
     vocabulary: { current: number; max: number };
     grammar: { current: number; max: number };
@@ -50,6 +58,7 @@ interface AppState {
   };
   settings: Settings;
   dailyQuests: DailyQuest[];
+  questResetDate: string; // ISO date string (YYYY-MM-DD)
   weeklyActivity: WeeklyActivity[];
   setLevel: (level: JLPTLevel) => void;
   setUserName: (name: string) => void;
@@ -60,6 +69,9 @@ interface AppState {
   updateQuestProgress: (questId: string, amount: number) => void;
   updateSettings: (partial: Partial<Settings>) => void;
   resetProgress: () => void;
+  checkDailyReset: () => void;
+  fetchStats: () => Promise<void>;
+  syncProgress: () => Promise<void>;
 }
 
 const getProgressForLevel = (level: JLPTLevel) => {
@@ -79,14 +91,18 @@ const defaultQuests: DailyQuest[] = [
 ];
 
 const defaultWeekly: WeeklyActivity[] = [
-  { day: 'Mon', xp: 45 },
-  { day: 'Tue', xp: 50 },
-  { day: 'Wed', xp: 30 },
-  { day: 'Thu', xp: 60 },
-  { day: 'Fri', xp: 40 },
+  { day: 'Mon', xp: 0 },
+  { day: 'Tue', xp: 0 },
+  { day: 'Wed', xp: 0 },
+  { day: 'Thu', xp: 0 },
+  { day: 'Fri', xp: 0 },
   { day: 'Sat', xp: 0 },
   { day: 'Sun', xp: 0 },
 ];
+
+function todayDateStr() {
+  return new Date().toISOString().split('T')[0];
+}
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -97,19 +113,20 @@ export const useAppStore = create<AppState>()(
         joined: 'April 19, 2026',
       },
       stats: {
-        streak: 14,
-        xp: 30,
+        streak: 0,
+        xp: 0,
         xpGoal: 50,
-        reviewsDue: 45,
-        totalStudyHours: 42,
-        cardsMastered: 843,
+        reviewsDue: 0,
+        totalStudyHours: 0,
+        cardsMastered: 0,
         lessonsCompleted: 0,
         quizzesCompleted: 0,
       },
+      srsBreakdown: { kanjiDue: 0, vocabDue: 0, grammarDue: 0 },
       progress: {
-        vocabulary: { current: 300, max: 800 },
-        grammar: { current: 45, max: 80 },
-        kanji: { current: 85, max: 100 },
+        vocabulary: { current: 0, max: 800 },
+        grammar: { current: 0, max: 80 },
+        kanji: { current: 0, max: 100 },
       },
       settings: {
         autoPlayAudio: true,
@@ -120,12 +137,12 @@ export const useAppStore = create<AppState>()(
         userType: 'student',
       },
       dailyQuests: defaultQuests,
+      questResetDate: todayDateStr(),
       weeklyActivity: defaultWeekly,
 
       setLevel: (level) => set((state) => ({
         user: { ...state.user, level },
         progress: getProgressForLevel(level),
-        stats: { ...state.stats, reviewsDue: Math.floor(Math.random() * 30) + 15 },
       })),
 
       setUserName: (name) => set((state) => ({
@@ -194,17 +211,102 @@ export const useAppStore = create<AppState>()(
           lessonsCompleted: 0,
           quizzesCompleted: 0,
         },
+        srsBreakdown: { kanjiDue: 0, vocabDue: 0, grammarDue: 0 },
         progress: getProgressForLevel(state.user.level),
         dailyQuests: defaultQuests,
+        questResetDate: todayDateStr(),
       })),
+
+      checkDailyReset: () => {
+        const today = todayDateStr();
+        const state = get();
+        if (state.questResetDate !== today) {
+          set({
+            dailyQuests: defaultQuests,
+            questResetDate: today,
+            stats: { ...state.stats, xp: 0 },
+          });
+        }
+      },
+
+      fetchStats: async () => {
+        try {
+          const [stats, streak, activity, dueCards] = await Promise.all([
+            progressService.getStats(),
+            progressService.getStreak(),
+            progressService.getActivity('7d'),
+            progressService.getDueCards(),
+          ]);
+
+          // Compute SRS breakdown from due cards
+          const breakdown: SrsBreakdown = { kanjiDue: 0, vocabDue: 0, grammarDue: 0 };
+          for (const card of dueCards) {
+            const ct = (card.contentType || '').toUpperCase();
+            if (ct === 'KANJI') breakdown.kanjiDue++;
+            else if (ct === 'VOCABULARY') breakdown.vocabDue++;
+            else if (ct === 'GRAMMAR') breakdown.grammarDue++;
+          }
+
+          // Map weekly activity — API returns {date, xpEarned, ...}
+          const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+          const weeklyMap = dayLabels.map(d => ({ day: d, xp: 0 }));
+          for (const a of activity) {
+            const dow = new Date(a.date).getDay(); // 0=Sun
+            const idx = dow === 0 ? 6 : dow - 1;
+            weeklyMap[idx] = { day: dayLabels[idx], xp: a.xpEarned };
+          }
+
+          set((state) => ({
+            stats: {
+              ...state.stats,
+              streak: streak.currentStreak,
+              totalStudyHours: stats.totalStudyHours,
+              cardsMastered: stats.cardsMastered,
+              lessonsCompleted: stats.lessonsCompleted,
+              quizzesCompleted: stats.quizzesCompleted,
+              reviewsDue: stats.reviewsDue,
+              xpGoal: state.settings.dailyGoal,
+            },
+            srsBreakdown: breakdown,
+            weeklyActivity: weeklyMap,
+          }));
+        } catch {
+          // Silently fail — local data remains as fallback
+        }
+      },
+
+      syncProgress: async () => {
+        try {
+          const allProgress = await progressService.getProgress();
+          const state = get();
+          const levelProgress = allProgress.find(
+            (p) => p.jlptLevelId === state.user.level
+          );
+          if (levelProgress) {
+            set({
+              progress: {
+                vocabulary: { current: levelProgress.vocabMastered, max: state.progress.vocabulary.max },
+                grammar: { current: levelProgress.grammarMastered, max: state.progress.grammar.max },
+                kanji: { current: levelProgress.kanjiMastered, max: state.progress.kanji.max },
+              },
+            });
+          }
+        } catch {
+          // Silently fail — local data remains as fallback
+        }
+      },
     }),
     {
       name: 'nihon-benkyou-app',
       partialize: (state) => ({
         user: state.user,
         stats: state.stats,
+        srsBreakdown: state.srsBreakdown,
         progress: state.progress,
         settings: state.settings,
+        dailyQuests: state.dailyQuests,
+        questResetDate: state.questResetDate,
+        weeklyActivity: state.weeklyActivity,
       }),
     }
   )

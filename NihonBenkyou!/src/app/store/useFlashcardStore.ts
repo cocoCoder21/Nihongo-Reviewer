@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { type JLPTLevel, levelContent } from '../data/levels';
+import { progressService } from '../services/progress.service';
 
 export type CardCategory = 'vocabulary' | 'grammar' | 'kanji' | 'particle';
 export type Difficulty = 'again' | 'hard' | 'good' | 'easy';
@@ -34,8 +35,11 @@ interface FlashcardStore {
   isFlipped: boolean;
   sessionStats: SessionStats;
   isSessionComplete: boolean;
+  categoryFilter: CardCategory | 'all';
+  setCategoryFilter: (filter: CardCategory | 'all') => void;
   loadDeck: (level: JLPTLevel) => void;
   startReview: (level: JLPTLevel) => void;
+  startApiReview: () => Promise<void>;
   flipCard: () => void;
   resetCard: () => void;
   answerCard: (difficulty: Difficulty) => void;
@@ -139,6 +143,9 @@ export const useFlashcardStore = create<FlashcardStore>()(
       isFlipped: false,
       isSessionComplete: false,
       sessionStats: { total: 0, correct: 0, again: 0, hard: 0, good: 0, easy: 0 },
+      categoryFilter: 'all' as CardCategory | 'all',
+
+      setCategoryFilter: (filter) => set({ categoryFilter: filter }),
 
       loadDeck: (level) => {
         const existing = get().allCards.filter(c => c.level === level);
@@ -217,6 +224,42 @@ export const useFlashcardStore = create<FlashcardStore>()(
         isSessionComplete: false,
         sessionStats: { total: 0, correct: 0, again: 0, hard: 0, good: 0, easy: 0 },
       }),
+
+      startApiReview: async () => {
+        try {
+          const dueCards = await progressService.getDueCards();
+          const filter = get().categoryFilter;
+          const contentTypeMap: Record<string, CardCategory> = {
+            VOCABULARY: 'vocabulary',
+            GRAMMAR: 'grammar',
+            KANJI: 'kanji',
+          };
+          let cards: Card[] = dueCards.map(c => ({
+            id: String(c.id),
+            front: c.front || '',
+            reading: c.reading || '',
+            meaning: c.meaning || '',
+            category: contentTypeMap[c.contentType] || 'vocabulary',
+            interval: c.interval,
+            ease: c.easeFactor,
+            repetitions: c.repetitions,
+            nextReview: new Date(c.nextReview).getTime(),
+            level: 'N5' as JLPTLevel, // level not critical for review
+          }));
+          if (filter !== 'all') {
+            cards = cards.filter(c => c.category === filter);
+          }
+          set({
+            sessionCards: cards.slice(0, 20),
+            currentIndex: 0,
+            isFlipped: false,
+            isSessionComplete: false,
+            sessionStats: { total: 0, correct: 0, again: 0, hard: 0, good: 0, easy: 0 },
+          });
+        } catch {
+          // Fallback: API unavailable, keep local review
+        }
+      },
     }),
     {
       name: 'nihon-benkyou-flashcards',
