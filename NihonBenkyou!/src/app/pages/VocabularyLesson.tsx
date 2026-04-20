@@ -1,16 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Volume2, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
+import { contentService } from '../services/content.service';
 import { levelContent } from '../data/levels';
+import type { VocabItem } from '../types';
 
 export const VocabularyLesson = () => {
   const navigate = useNavigate();
   const { addXp, completeLesson, user } = useAppStore();
   const [step, setStep] = useState(0);
+  const [vocab, setVocab] = useState<VocabItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const vocab = levelContent[user.level].vocabulary;
+  useEffect(() => {
+    contentService.getVocabulary(user.level)
+      .then((data) => {
+        if (data.length > 0) setVocab(data);
+        else setVocab(levelContent[user.level].vocabulary as unknown as VocabItem[]);
+      })
+      .catch(() => {
+        setVocab(levelContent[user.level].vocabulary as unknown as VocabItem[]);
+      })
+      .finally(() => setLoading(false));
+  }, [user.level]);
 
   const handleContinue = () => {
     if (step < vocab.length - 1) {
@@ -27,6 +41,7 @@ export const VocabularyLesson = () => {
   };
 
   const current = vocab[step];
+  if (loading) return <div className="flex items-center justify-center h-full"><p className="text-slate-500 font-medium">Loading vocabulary...</p></div>;
   if (!current) return null;
 
   return (

@@ -1,16 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Volume2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
+import { contentService } from '../services/content.service';
 import { levelContent } from '../data/levels';
+import type { GrammarItem } from '../types';
 
 export const GrammarLesson = () => {
   const navigate = useNavigate();
   const { addXp, completeLesson, user } = useAppStore();
   const [step, setStep] = useState(0);
+  const [lessons, setLessons] = useState<GrammarItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const lessons = levelContent[user.level].grammar;
+  useEffect(() => {
+    contentService.getGrammar(user.level)
+      .then((data) => {
+        if (data.length > 0) setLessons(data);
+        else setLessons(levelContent[user.level].grammar as unknown as GrammarItem[]);
+      })
+      .catch(() => {
+        setLessons(levelContent[user.level].grammar as unknown as GrammarItem[]);
+      })
+      .finally(() => setLoading(false));
+  }, [user.level]);
 
   const handleContinue = () => {
     if (step < lessons.length - 1) {
@@ -23,6 +37,7 @@ export const GrammarLesson = () => {
   };
 
   const currentLesson = lessons[step];
+  if (loading) return <div className="flex items-center justify-center h-full"><p className="text-slate-500 font-medium">Loading grammar...</p></div>;
   if (!currentLesson) return null;
 
   return (
@@ -46,7 +61,7 @@ export const GrammarLesson = () => {
         </div>
 
         <div className="text-brand-500 font-bold px-3 py-1 rounded-full bg-brand-50 text-sm border border-brand-200">
-          ♡ 5
+          {step + 1}/{lessons.length}
         </div>
       </header>
 
@@ -93,7 +108,7 @@ export const GrammarLesson = () => {
               </button>
               <div>
                 <p className="text-xl font-bold text-slate-800 mb-1">
-                  私は本を<span className="text-blue-600 border-b-2 border-blue-300 pb-0.5">買って</span>、読みました。
+                  {currentLesson.sentence}
                 </p>
                 <p className="text-sm font-medium text-slate-400 mb-2">{currentLesson.sentenceRomaji}</p>
                 <p className="text-base text-slate-600">{currentLesson.sentenceMeaning}</p>

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Type, Pencil, Headphones, Mic, BookOpen } from 'lucide-react';
+import { Type, Pencil, Headphones, BookOpen } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 export const LearnHub = () => {
@@ -52,15 +52,6 @@ export const LearnHub = () => {
           color="bg-emerald-50 border-emerald-200"
           hoverColor="hover:bg-emerald-100 hover:border-emerald-300"
           onClick={() => navigate('/learn/listening')}
-        />
-
-        <SkillCard 
-          title="Speaking & Shadowing"
-          description="Record yourself and match native pronunciation."
-          icon={<Mic className="w-8 h-8 text-purple-600" />}
-          color="bg-purple-50 border-purple-200"
-          hoverColor="hover:bg-purple-100 hover:border-purple-300"
-          onClick={() => navigate('/learn/speaking')}
         />
 
       </div>
