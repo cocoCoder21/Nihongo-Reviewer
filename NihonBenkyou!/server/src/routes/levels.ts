@@ -157,6 +157,7 @@ router.get('/:level/grammar', async (req: Request, res: Response) => {
         crossReference: null,
         lessonNumber: g.sourceLessonNumber || undefined,
         sourceBook: g.sourceBook || undefined,
+        particles: (g.particles as string[]) || [],
       };
     });
 
@@ -167,13 +168,43 @@ router.get('/:level/grammar', async (req: Request, res: Response) => {
   }
 });
 
+// GET /levels/:level/kanji/categories
+router.get('/:level/kanji/categories', async (req: Request, res: Response) => {
+  try {
+    const level = req.params.level as string;
+
+    const categories = await prisma.kanji.groupBy({
+      by: ['category'],
+      where: { jlptLevelId: level, category: { not: '' } },
+      _count: { id: true },
+      orderBy: { category: 'asc' },
+    });
+
+    res.json(
+      categories.map((c) => ({
+        name: c.category,
+        count: c._count.id,
+      })),
+    );
+  } catch (err) {
+    console.error('Get kanji categories error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // GET /levels/:level/kanji
 router.get('/:level/kanji', async (req: Request, res: Response) => {
   try {
     const level = req.params.level as string;
+    const { category } = req.query;
+
+    const where: Record<string, unknown> = { jlptLevelId: level };
+    if (category) {
+      where.category = category as string;
+    }
 
     const kanji = await prisma.kanji.findMany({
-      where: { jlptLevelId: level },
+      where,
       include: {
         vocabulary: true,
         examples: true,
@@ -191,6 +222,7 @@ router.get('/:level/kanji', async (req: Request, res: Response) => {
       strokeCount: k.strokeCount,
       mnemonic: k.mnemonic || undefined,
       radicalId: k.radicalId,
+      category: k.category || undefined,
       examples: k.vocabulary.map((v: { word: string }) => v.word),
       vocabulary: k.vocabulary.map((v: { word: string; reading: string; meaning: string }) => ({
         word: v.word,

@@ -409,43 +409,47 @@ router.get('/stats', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
 
-    const [streak, sessions, masteredCards, lessonsDone] = await Promise.all([
+    // Today's date at midnight UTC for daily XP/activity queries
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [streak, masteredCards, lessonsDone, totalMinutes, reviewsDue, todayActivity] = await Promise.all([
       prisma.userStreak.findUnique({ where: { userId } }),
-      prisma.studySession.aggregate({
-        where: { userId },
-        _sum: { xpEarned: true },
-        _count: true,
-      }),
       prisma.srsCard.count({ where: { userId, status: 'MASTERED' } }),
       prisma.lessonProgress.count({ where: { userId, completed: true } }),
+      prisma.dailyActivity.aggregate({
+        where: { userId },
+        _sum: { minutesStudied: true },
+      }),
+      prisma.srsCard.count({
+        where: {
+          userId,
+          nextReview: { lte: new Date() },
+          status: { not: 'MASTERED' },
+        },
+      }),
+      // Today's activity — used for daily XP, lessons, reviews, quizzes
+      prisma.dailyActivity.findFirst({
+        where: { userId, date: { gte: todayStart } },
+      }),
     ]);
 
     const quizSessions = await prisma.studySession.count({
-      where: { userId, type: 'QUIZ' },
-    });
-
-    const totalMinutes = await prisma.dailyActivity.aggregate({
-      where: { userId },
-      _sum: { minutesStudied: true },
-    });
-
-    const reviewsDue = await prisma.srsCard.count({
-      where: {
-        userId,
-        nextReview: { lte: new Date() },
-        status: { not: 'MASTERED' },
-      },
+      where: { userId, type: 'QUIZ', startedAt: { gte: todayStart } },
     });
 
     res.json({
       streak: streak?.currentStreak ?? 0,
-      xp: sessions._sum.xpEarned ?? 0,
-      xpGoal: 50, // Could be from user settings
+      xp: todayActivity?.xpEarned ?? 0,          // Today's XP only
+      xpGoal: 50,
       reviewsDue,
       totalStudyHours: Math.round((totalMinutes._sum.minutesStudied ?? 0) / 60 * 10) / 10,
       cardsMastered: masteredCards,
       lessonsCompleted: lessonsDone,
       quizzesCompleted: quizSessions,
+      // Today's activity counts for quest sync
+      todayLessonsCompleted: todayActivity?.lessonsCompleted ?? 0,
+      todayReviewsCompleted: todayActivity?.reviewsCompleted ?? 0,
     });
   } catch (err) {
     console.error('Get stats error:', err);
@@ -674,6 +678,108 @@ router.post('/study-session', async (req: Request, res: Response) => {
     res.status(204).send();
   } catch (err) {
     console.error('Log study session error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// ─── Content Familiarity ──────────────────────────────────────────
+
+const VALID_CONTENT_TYPES = ['vocabulary', 'grammar', 'kanji', 'hiragana', 'katakana'];
+
+// POST /user/familiarity — toggle familiarity for a content item
+router.post('/familiarity', async (req: Request, res: Response) => {
+  try {
+    const { contentType, contentId } = req.body;
+
+    if (!contentType || contentId === undefined) {
+      res.status(400).json({ message: 'contentType and contentId are required' });
+      return;
+    }
+
+    if (!VALID_CONTENT_TYPES.includes(contentType)) {
+      res.status(400).json({ message: 'Invalid contentType' });
+      return;
+    }
+
+    const userId = req.user!.userId;
+    const numericContentId = Number(contentId);
+
+    // Check if already familiarized
+    const existing = await prisma.contentFamiliarity.findUnique({
+      where: {
+        userId_contentType_contentId: {
+          userId,
+          contentType,
+          contentId: numericContentId,
+        },
+      },
+    });
+
+    if (existing) {
+      // Toggle off — remove
+      await prisma.contentFamiliarity.delete({
+        where: { id: existing.id },
+      });
+      res.json({ familiarized: false });
+    } else {
+      // Toggle on — create
+      await prisma.contentFamiliarity.create({
+        data: {
+          userId,
+          contentType,
+          contentId: numericContentId,
+        },
+      });
+      res.json({ familiarized: true });
+    }
+  } catch (err) {
+    console.error('Toggle familiarity error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /user/familiarity?contentType=vocabulary — get familiarized item IDs
+router.get('/familiarity', async (req: Request, res: Response) => {
+  try {
+    const contentType = req.query.contentType as string | undefined;
+    const userId = req.user!.userId;
+
+    const where: { userId: number; contentType?: string } = { userId };
+    if (contentType && VALID_CONTENT_TYPES.includes(contentType)) {
+      where.contentType = contentType;
+    }
+
+    const items = await prisma.contentFamiliarity.findMany({
+      where,
+      select: { contentType: true, contentId: true },
+    });
+
+    res.json(items);
+  } catch (err) {
+    console.error('Get familiarity error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /user/familiarity/counts — get counts per content type
+router.get('/familiarity/counts', async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+
+    const counts = await prisma.contentFamiliarity.groupBy({
+      by: ['contentType'],
+      where: { userId },
+      _count: { contentType: true },
+    });
+
+    const result: Record<string, number> = {};
+    for (const c of counts) {
+      result[c.contentType] = c._count.contentType;
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error('Get familiarity counts error:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });

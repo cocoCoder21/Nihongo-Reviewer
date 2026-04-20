@@ -212,4 +212,32 @@ router.patch('/password', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// PATCH /auth/profile
+router.patch('/profile', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { displayName } = req.body;
+
+    if (!displayName || typeof displayName !== 'string' || displayName.trim().length < 1) {
+      res.status(400).json({ message: 'Display name is required' });
+      return;
+    }
+
+    if (displayName.trim().length > 50) {
+      res.status(400).json({ message: 'Display name must be 50 characters or less' });
+      return;
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user!.userId },
+      data: { displayName: displayName.trim() },
+      select: { id: true, email: true, displayName: true, currentJlptLevel: true, userType: true, dailyGoalMinutes: true, createdAt: true },
+    });
+
+    res.json(user);
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;
