@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Type, Pencil, Headphones, BookOpen } from 'lucide-react';
+import { Type, Pencil, Headphones, BookOpen, Languages } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 export const LearnHub = () => {
@@ -17,6 +17,15 @@ export const LearnHub = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <SkillCard 
+          title="Kana (Hiragana & Katakana)"
+          description="Master the Japanese writing systems — learn each character, its sound, and stroke order."
+          icon={<Languages className="w-8 h-8 text-purple-600" />}
+          color="bg-purple-50 border-purple-200"
+          hoverColor="hover:bg-purple-100 hover:border-purple-300"
+          onClick={() => navigate('/learn/kana')}
+        />
 
         <SkillCard 
           title="Vocabulary"
@@ -46,8 +55,8 @@ export const LearnHub = () => {
         />
 
         <SkillCard 
-          title="Listening Comprehension"
-          description="Train your ear with native audio clips and dialogues."
+          title="Listening Practice"
+          description="Play audio tracks and follow along in your Minna no Nihongo textbook."
           icon={<Headphones className="w-8 h-8 text-emerald-600" />}
           color="bg-emerald-50 border-emerald-200"
           hoverColor="hover:bg-emerald-100 hover:border-emerald-300"
