@@ -31,19 +31,10 @@ export interface KanjiItem {
   examples: string[];
 }
 
-export interface ListeningItem {
-  id: string;
-  sentence: string;
-  romaji: string;
-  meaning: string;
-  options: { id: string; text: string; correct: boolean }[];
-}
-
 export interface LevelContent {
   vocabulary: VocabItem[];
   grammar: GrammarItem[];
   kanji: KanjiItem[];
-  listening: ListeningItem[];
 }
 
 export const levelInfo: Record<JLPTLevel, { label: string; description: string; vocabCount: number; kanjiCount: number; grammarCount: number }> = {
@@ -75,30 +66,35 @@ const n5Content: LevelContent = {
       rule: 'For verbs ending in う, つ, or る (u, tsu, ru), drop the ending and add って (tte).',
       example: '買う (kau)', exampleConverted: '買って', exampleRomaji: 'katte', exampleMeaning: 'to buy',
       sentence: '私は本を買って、読みました。', sentenceRomaji: 'Watashi wa hon o katte, yomimashita.', sentenceMeaning: 'I bought a book and read it.',
+      particles: [],
     },
     {
       id: 'g2', title: '〜ます form (Polite)',
       rule: 'Add ます to the verb stem for polite present/future tense.',
       example: '食べる (taberu)', exampleConverted: '食べます', exampleRomaji: 'tabemasu', exampleMeaning: 'to eat',
       sentence: '毎日ごはんを食べます。', sentenceRomaji: 'Mainichi gohan o tabemasu.', sentenceMeaning: 'I eat rice every day.',
+      particles: ['ます'],
     },
     {
       id: 'g3', title: '〜ない form (Negative)',
       rule: 'Change the verb ending to the あ-column and add ない.',
       example: '飲む (nomu)', exampleConverted: '飲まない', exampleRomaji: 'nomanai', exampleMeaning: 'to drink',
       sentence: 'お酒を飲まない。', sentenceRomaji: 'Osake o nomanai.', sentenceMeaning: 'I don\'t drink alcohol.',
+      particles: ['ない'],
     },
     {
       id: 'g4', title: 'Particle は (wa) - Topic',
       rule: 'は marks the topic of the sentence — "as for X..."',
       example: '私は (watashi wa)', exampleConverted: '私は学生です', exampleRomaji: 'watashi wa gakusei desu', exampleMeaning: 'I',
       sentence: '私は学生です。', sentenceRomaji: 'Watashi wa gakusei desu.', sentenceMeaning: 'I am a student.',
+      particles: ['は'],
     },
     {
       id: 'g5', title: 'Particle を (wo) - Object',
       rule: 'を marks the direct object of a verb.',
       example: '水を (mizu wo)', exampleConverted: '水を飲む', exampleRomaji: 'mizu wo nomu', exampleMeaning: 'water',
       sentence: '水を飲みます。', sentenceRomaji: 'Mizu wo nomimasu.', sentenceMeaning: 'I drink water.',
+      particles: ['を'],
     },
   ],
   kanji: [
@@ -110,35 +106,6 @@ const n5Content: LevelContent = {
     { id: 'k6', kanji: '人', reading: 'ひと/じん (hito/jin)', meaning: 'person', strokeCount: 2, examples: ['日本人', '人々'] },
     { id: 'k7', kanji: '大', reading: 'おお (oo)', meaning: 'big', strokeCount: 3, examples: ['大きい', '大学'] },
     { id: 'k8', kanji: '小', reading: 'ちい (chii)', meaning: 'small', strokeCount: 3, examples: ['小さい', '小学校'] },
-  ],
-  listening: [
-    {
-      id: 'l1', sentence: '犬が好きです。', romaji: 'Inu ga suki desu.', meaning: 'I like dogs.',
-      options: [
-        { id: '1', text: 'I drink water', correct: false },
-        { id: '2', text: 'I eat sushi', correct: false },
-        { id: '3', text: 'I like dogs', correct: true },
-        { id: '4', text: 'I like cats', correct: false },
-      ],
-    },
-    {
-      id: 'l2', sentence: '学校に行きます。', romaji: 'Gakkou ni ikimasu.', meaning: 'I go to school.',
-      options: [
-        { id: '1', text: 'I go to school', correct: true },
-        { id: '2', text: 'I come from school', correct: false },
-        { id: '3', text: 'I like school', correct: false },
-        { id: '4', text: 'I study at home', correct: false },
-      ],
-    },
-    {
-      id: 'l3', sentence: '毎朝コーヒーを飲みます。', romaji: 'Maiasa koohii o nomimasu.', meaning: 'I drink coffee every morning.',
-      options: [
-        { id: '1', text: 'I eat breakfast every morning', correct: false },
-        { id: '2', text: 'I drink coffee every morning', correct: true },
-        { id: '3', text: 'I go to work every morning', correct: false },
-        { id: '4', text: 'I drink tea every evening', correct: false },
-      ],
-    },
   ],
 };
 
@@ -181,17 +148,6 @@ const n4Content: LevelContent = {
     { id: 'k5', kanji: '知', reading: 'し/ち (shi/chi)', meaning: 'know', strokeCount: 8, examples: ['知る', '知識'] },
     { id: 'k6', kanji: '言', reading: 'い/げん (i/gen)', meaning: 'say / word', strokeCount: 7, examples: ['言う', '言葉'] },
   ],
-  listening: [
-    {
-      id: 'l1', sentence: '明日は雨が降るそうです。', romaji: 'Ashita wa ame ga furu sou desu.', meaning: 'I heard it will rain tomorrow.',
-      options: [
-        { id: '1', text: 'Tomorrow will be sunny', correct: false },
-        { id: '2', text: 'I heard it will rain tomorrow', correct: true },
-        { id: '3', text: 'It rained yesterday', correct: false },
-        { id: '4', text: 'I like rainy days', correct: false },
-      ],
-    },
-  ],
 };
 
 const n3Content: LevelContent = {
@@ -223,17 +179,6 @@ const n3Content: LevelContent = {
     { id: 'k3', kanji: '政', reading: 'せい (sei)', meaning: 'politics', strokeCount: 9, examples: ['政治', '政府'] },
     { id: 'k4', kanji: '経', reading: 'けい (kei)', meaning: 'pass through / manage', strokeCount: 11, examples: ['経済', '経験'] },
   ],
-  listening: [
-    {
-      id: 'l1', sentence: '最近、運動するようにしています。', romaji: 'Saikin, undou suru you ni shiteimasu.', meaning: 'Recently, I have been trying to exercise.',
-      options: [
-        { id: '1', text: 'I started a new diet recently', correct: false },
-        { id: '2', text: 'I have been trying to exercise recently', correct: true },
-        { id: '3', text: 'I stopped exercising recently', correct: false },
-        { id: '4', text: 'I want to start exercising soon', correct: false },
-      ],
-    },
-  ],
 };
 
 const n2Content: LevelContent = {
@@ -256,17 +201,6 @@ const n2Content: LevelContent = {
     { id: 'k2', kanji: '際', reading: 'さい (sai)', meaning: 'occasion / edge', strokeCount: 14, examples: ['国際', '実際'] },
     { id: 'k3', kanji: '制', reading: 'せい (sei)', meaning: 'system / control', strokeCount: 8, examples: ['制度', '規制'] },
   ],
-  listening: [
-    {
-      id: 'l1', sentence: 'この問題について検討しなければなりません。', romaji: 'Kono mondai ni tsuite kentou shinakereba narimasen.', meaning: 'We must examine this problem.',
-      options: [
-        { id: '1', text: 'We must examine this problem', correct: true },
-        { id: '2', text: 'We solved this problem', correct: false },
-        { id: '3', text: 'This problem is not important', correct: false },
-        { id: '4', text: 'There is no problem here', correct: false },
-      ],
-    },
-  ],
 };
 
 const n1Content: LevelContent = {
@@ -286,17 +220,6 @@ const n1Content: LevelContent = {
   kanji: [
     { id: 'k1', kanji: '鬱', reading: 'うつ (utsu)', meaning: 'depression / melancholy', strokeCount: 29, examples: ['憂鬱', '鬱病'] },
     { id: 'k2', kanji: '璧', reading: 'へき (heki)', meaning: 'perfect gem', strokeCount: 18, examples: ['完璧'] },
-  ],
-  listening: [
-    {
-      id: 'l1', sentence: '本日をもって、この制度は廃止されます。', romaji: 'Honjitsu o motte, kono seido wa haishi saremasu.', meaning: 'As of today, this system will be abolished.',
-      options: [
-        { id: '1', text: 'The new system starts today', correct: false },
-        { id: '2', text: 'This system will be abolished today', correct: true },
-        { id: '3', text: 'The system was established today', correct: false },
-        { id: '4', text: 'We are reviewing the system today', correct: false },
-      ],
-    },
   ],
 };
 

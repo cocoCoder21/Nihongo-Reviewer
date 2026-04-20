@@ -6,7 +6,6 @@ import { progressService } from '../services/progress.service';
 export type UserType = 'student' | 'professional';
 
 interface Settings {
-  autoPlayAudio: boolean;
   showRomaji: boolean;
   darkMode: boolean;
   dailyGoal: number; // XP
@@ -129,7 +128,6 @@ export const useAppStore = create<AppState>()(
         kanji: { current: 0, max: 100 },
       },
       settings: {
-        autoPlayAudio: true,
         showRomaji: false,
         darkMode: false,
         dailyGoal: 50,
@@ -260,15 +258,23 @@ export const useAppStore = create<AppState>()(
             stats: {
               ...state.stats,
               streak: streak.currentStreak,
+              xp: stats.xp,                        // Today's XP from backend
+              xpGoal: stats.xpGoal,
               totalStudyHours: stats.totalStudyHours,
               cardsMastered: stats.cardsMastered,
               lessonsCompleted: stats.lessonsCompleted,
               quizzesCompleted: stats.quizzesCompleted,
               reviewsDue: stats.reviewsDue,
-              xpGoal: state.settings.dailyGoal,
             },
             srsBreakdown: breakdown,
             weeklyActivity: weeklyMap,
+            // Sync daily quest progress with real backend data
+            dailyQuests: state.dailyQuests.map(q => {
+              if (q.id === 'xp') return { ...q, current: Math.min(stats.xp, q.max) };
+              if (q.id === 'lesson') return { ...q, current: Math.min(stats.todayLessonsCompleted, q.max) };
+              if (q.id === 'review') return { ...q, current: Math.min(stats.todayReviewsCompleted, q.max) };
+              return q;
+            }),
           }));
         } catch {
           // Silently fail — local data remains as fallback

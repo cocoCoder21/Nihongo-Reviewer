@@ -14,6 +14,7 @@ interface AuthState {
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  updateDisplayName: (displayName: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -104,6 +105,11 @@ export const useAuthStore = create<AuthState>()(
             isInitialized: true,
           });
         }
+      },
+
+      updateDisplayName: async (displayName: string) => {
+        const user = await authService.updateProfile(displayName);
+        set((state) => ({ user: state.user ? { ...state.user, displayName: user.displayName } : null }));
       },
 
       clearError: () => set({ error: null }),
