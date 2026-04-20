@@ -3,10 +3,12 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { resolve, join } from 'path';
 import { readdirSync, existsSync } from 'fs';
-import { parseShokyuLesson } from './parsers/shokyu-lesson-parser.js';
+import { parseShokyuLesson, extractParticles } from './parsers/shokyu-lesson-parser.js';
 import { parseChukyuLesson } from './parsers/chukyu-lesson-parser.js';
 import { parseKanjiFile } from './parsers/kanji-parser.js';
 import { parseRadicalsFile } from './parsers/radical-parser.js';
+import { seedKana } from './seed-kana.js';
+import { seedExamples } from './seed-examples.js';
 
 const adapter = new PrismaPg(process.env.DATABASE_URL!);
 const prisma = new PrismaClient({ adapter });
@@ -40,6 +42,19 @@ function getLessonFiles(dir: string): string[] {
 
 function log(msg: string) {
   console.log(`[seed] ${msg}`);
+}
+
+async function runSubScript(relPath: string) {
+  const { spawnSync } = await import('child_process');
+  const scriptPath = resolve(import.meta.dirname, relPath);
+  const result = spawnSync('npx', ['tsx', scriptPath], {
+    stdio: 'inherit',
+    shell: true,
+    cwd: resolve(import.meta.dirname, '..', '..'),
+  });
+  if (result.status !== 0) {
+    throw new Error(`Sub-seed script failed: ${relPath} (exit ${result.status})`);
+  }
 }
 
 // ─── JLPT Levels ─────────────────────────────────────────────────
@@ -129,6 +144,8 @@ async function seedShokyuLessons() {
               word: v.word,
               reading: v.reading,
               meaning: v.meaning,
+              example: v.example,
+              exampleMeaning: v.exampleMeaning,
               category: v.category,
               sortOrder: v.sortOrder,
             })),
@@ -146,6 +163,7 @@ async function seedShokyuLessons() {
               formation: g.formation,
               rule: g.rule,
               examples: g.examples,
+              particles: g.particles,
               sortOrder: g.sortOrder,
             })),
           });
@@ -221,6 +239,7 @@ async function seedChukyuLessons() {
               rule: g.rule,
               examples: g.examples,
               crossReference: g.crossReference || null,
+              particles: g.particles,
               sortOrder: g.sortOrder,
             })),
           });
@@ -313,6 +332,7 @@ async function seedKanji() {
           mnemonic: k.mnemonic,
           radicalId,
           radicalGroup: k.radicalName,
+          category: k.category,
         },
         create: {
           jlptLevelId: levelId,
@@ -323,6 +343,7 @@ async function seedKanji() {
           mnemonic: k.mnemonic,
           radicalId,
           radicalGroup: k.radicalName,
+          category: k.category,
         },
       });
 
@@ -379,7 +400,10 @@ async function seedUnifiedContent() {
         where: {
           id: await findVocabId(jlptLevelId, v.word, v.reading),
         },
-        update: {},
+        update: {
+          example: v.example,
+          exampleMeaning: v.exampleMeaning,
+        },
         create: {
           jlptLevelId,
           word: v.word,
@@ -400,7 +424,7 @@ async function seedUnifiedContent() {
         where: {
           id: await findGrammarId(jlptLevelId, g.pattern, lesson.book.name, lesson.lessonNumber),
         },
-        update: {},
+        update: { particles: (g.particles as any) || [] },
         create: {
           jlptLevelId,
           pattern: g.pattern,
@@ -408,6 +432,7 @@ async function seedUnifiedContent() {
           formation: g.formation,
           rule: g.rule,
           examples: g.examples as any,
+          particles: (g.particles as any) || [],
           sourceBook: lesson.book.name,
           sourceLessonNumber: lesson.lessonNumber,
         },
@@ -429,7 +454,10 @@ async function seedUnifiedContent() {
         where: {
           id: await findVocabId(jlptLevelId, v.word, v.reading),
         },
-        update: {},
+        update: {
+          example: v.example,
+          exampleMeaning: v.exampleMeaning,
+        },
         create: {
           jlptLevelId,
           word: v.word,
@@ -450,7 +478,7 @@ async function seedUnifiedContent() {
         where: {
           id: await findGrammarId(jlptLevelId, g.pattern, lesson.book.name, lesson.lessonNumber),
         },
-        update: {},
+        update: { particles: (g.particles as any) || [] },
         create: {
           jlptLevelId,
           pattern: g.pattern,
@@ -458,6 +486,7 @@ async function seedUnifiedContent() {
           formation: g.formation,
           rule: g.rule,
           examples: g.examples as any,
+          particles: (g.particles as any) || [],
           sourceBook: lesson.book.name,
           sourceLessonNumber: lesson.lessonNumber,
         },
@@ -503,7 +532,13 @@ async function main() {
   await seedShokyuLessons();
   await seedChukyuLessons();
   await seedKanji();
+  await seedKana(prisma);
   await seedUnifiedContent();
+  log('Seeding vocabulary example sentences...');
+  await seedExamples(prisma);
+
+  log('Seeding audio tracks...');
+  await runSubScript('../../prisma/seed-audio.ts');
 
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
   console.log(`\n✅ Seed completed in ${elapsed}s`);

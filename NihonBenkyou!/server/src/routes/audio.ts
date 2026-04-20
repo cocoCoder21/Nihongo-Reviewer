@@ -3,7 +3,95 @@ import prisma from '../lib/prisma.js';
 
 const router = Router();
 
-// GET /audio/:lessonId — list audio tracks for a lesson
+// ─── GET /audio/by-book — list tracks by bookId + lessonNumber ────
+// Query params: bookId, lesson (number)
+router.get('/by-book', async (req: Request, res: Response) => {
+  try {
+    const { bookId, lesson } = req.query;
+    if (!bookId || !lesson) {
+      res.status(400).json({ message: 'bookId and lesson are required' });
+      return;
+    }
+    const lessonNumber = parseInt(lesson as string, 10);
+    if (isNaN(lessonNumber)) {
+      res.status(400).json({ message: 'lesson must be a number' });
+      return;
+    }
+
+    // bookId param is the book name (e.g. "shokyu_1"); resolve to UUID
+    const book = await prisma.book.findUnique({ where: { name: bookId as string } });
+    if (!book) {
+      res.json([]);
+      return;
+    }
+
+    const tracks = await prisma.audioTrack.findMany({
+      where: { bookId: book.id, lessonNumber },
+      orderBy: { trackNumber: 'asc' },
+    });
+
+    res.json(tracks.map((t) => ({
+      id: t.id,
+      bookId: t.bookId,
+      lessonNumber: t.lessonNumber,
+      trackNumber: t.trackNumber,
+      filePath: t.filePath,
+      fileName: t.fileName,
+      trackType: t.trackType,
+      sectionLabel: t.sectionLabel,
+      description: t.description,
+      scenarioContext: t.scenarioContext,
+    })));
+  } catch (err) {
+    console.error('Get tracks by-book error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// ─── GET /audio/stream/:bookId/:lesson/:track — stream by book coords ─
+router.get('/stream/:bookId/:lesson/:track', async (req: Request, res: Response) => {
+  try {
+    const bookId = req.params.bookId as string;
+    const lessonNumber = parseInt(req.params.lesson as string, 10);
+    const trackNumber = parseInt(req.params.track as string, 10);
+
+    if (isNaN(lessonNumber) || isNaN(trackNumber)) {
+      res.status(400).json({ message: 'Invalid lesson or track number' });
+      return;
+    }
+
+    // bookId param is the book name (e.g. "shokyu_1"); resolve to UUID
+    const book = await prisma.book.findUnique({ where: { name: bookId } });
+    if (!book) {
+      res.status(404).json({ message: 'Book not found' });
+      return;
+    }
+
+    const audioTrack = await prisma.audioTrack.findUnique({
+      where: {
+        bookId_lessonNumber_trackNumber: { bookId: book.id, lessonNumber, trackNumber },
+      },
+    });
+
+    if (!audioTrack) {
+      res.status(404).json({ message: 'Track not found' });
+      return;
+    }
+
+    const pathModule = await import('path');
+    const { fileURLToPath } = await import('url');
+    const __dirname = pathModule.dirname(fileURLToPath(import.meta.url));
+    // server/src/routes → 4 levels up to reach minna-no-nihongo-reviewer/
+    const audioPath = pathModule.resolve(__dirname, '..', '..', '..', '..', audioTrack.filePath);
+
+    res.sendFile(audioPath);
+  } catch (err) {
+    console.error('Stream audio by-book error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
 router.get('/:lessonId', async (req: Request, res: Response) => {
   try {
     const lessonId = parseInt(req.params.lessonId as string, 10);
@@ -46,6 +134,10 @@ router.get('/:lessonId', async (req: Request, res: Response) => {
       trackNumber: t.trackNumber,
       filePath: t.filePath,
       fileName: t.fileName,
+      trackType: t.trackType,
+      sectionLabel: t.sectionLabel,
+      description: t.description,
+      scenarioContext: t.scenarioContext,
     }));
 
     res.json(result);
