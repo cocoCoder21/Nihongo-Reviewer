@@ -11,6 +11,15 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+function formatInterval(days: number): string {
+  if (days <= 0) return '<1m';
+  if (days < 1) return `${Math.round(days * 24)}h`;
+  if (days === 1) return '1d';
+  if (days < 30) return `${days}d`;
+  if (days < 365) return `${Math.round(days / 30)}mo`;
+  return `${(days / 365).toFixed(1)}y`;
+}
+
 const categoryColors: Record<CardCategory, { bg: string, text: string, label: string }> = {
   grammar: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Grammar' },
   vocabulary: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Vocabulary' },
@@ -19,14 +28,16 @@ const categoryColors: Record<CardCategory, { bg: string, text: string, label: st
 };
 
 export const Flashcard = () => {
-  const { sessionCards, currentIndex, isFlipped, isSessionComplete, sessionStats, flipCard, answerCard, startReview, resetSession } = useFlashcardStore();
+  const { sessionCards, currentIndex, isFlipped, isSessionComplete, sessionStats, flipCard, answerCard, startReview, startApiReview, resetSession } = useFlashcardStore();
   const { user, addXp, completeReview } = useAppStore();
   const navigate = useNavigate();
   const currentCard = sessionCards[currentIndex];
+  const remaining = sessionCards.length - currentIndex;
 
   useEffect(() => {
     if (sessionCards.length === 0) {
-      startReview(user.level);
+      // Try API first, fall back to local
+      startApiReview().catch(() => startReview(user.level));
     }
   }, []);
 
@@ -119,7 +130,7 @@ export const Flashcard = () => {
   return (
     <div className="flex flex-col items-center w-full max-w-lg mx-auto p-4 md:p-8 relative">
       <div className="w-full flex justify-between items-center mb-8 text-sm text-slate-500 font-medium">
-        <span>Cards remaining: {sessionCards.length - currentIndex}</span>
+        <span>Cards remaining: {remaining}</span>
         <div className="flex space-x-1.5">
           {sessionCards.map((_, idx) => (
             <div 
@@ -187,7 +198,7 @@ export const Flashcard = () => {
           >
             <AnswerButton 
               label="Again" 
-              time="1m" 
+              time={formatInterval(0)} 
               shortcut="1" 
               color="bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
               icon={<X className="w-5 h-5 mb-1 text-slate-500" />}
@@ -195,7 +206,7 @@ export const Flashcard = () => {
             />
             <AnswerButton 
               label="Hard" 
-              time="10m" 
+              time={formatInterval(currentCard ? Math.max(1, Math.round(currentCard.interval * 1.2)) : 1)} 
               shortcut="2" 
               color="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
               icon={<BrainCircuit className="w-5 h-5 mb-1 text-orange-500" />}
@@ -203,7 +214,7 @@ export const Flashcard = () => {
             />
             <AnswerButton 
               label="Good" 
-              time="1d" 
+              time={formatInterval(currentCard ? (currentCard.repetitions === 0 ? 1 : currentCard.repetitions === 1 ? 6 : Math.round(currentCard.interval * currentCard.ease)) : 1)} 
               shortcut="3" 
               color="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200"
               icon={<Check className="w-5 h-5 mb-1 text-emerald-500" />}
@@ -211,7 +222,7 @@ export const Flashcard = () => {
             />
             <AnswerButton 
               label="Easy" 
-              time="4d" 
+              time={formatInterval(currentCard ? Math.round((currentCard.repetitions === 0 ? 1 : currentCard.repetitions === 1 ? 6 : currentCard.interval * currentCard.ease) * 1.3) : 4)} 
               shortcut="4" 
               color="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
               icon={<FastForward className="w-5 h-5 mb-1 text-blue-500" />}
