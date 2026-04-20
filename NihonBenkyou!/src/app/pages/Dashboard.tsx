@@ -3,10 +3,17 @@ import { useAppStore } from '../store/useAppStore';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useEffect } from 'react';
 
 export const Dashboard = () => {
-  const { user, stats, progress, weeklyActivity, dailyQuests } = useAppStore();
+  const { user, stats, srsBreakdown, progress, weeklyActivity, dailyQuests, fetchStats, syncProgress, checkDailyReset } = useAppStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    checkDailyReset();
+    fetchStats();
+    syncProgress();
+  }, []);
 
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const safeWeekly = weeklyActivity ?? [];
@@ -67,8 +74,8 @@ export const Dashboard = () => {
             
             <div className="relative z-10 flex flex-col items-start max-w-sm mb-6 md:mb-0">
               <div className="flex space-x-2 mb-4">
-                <span className="px-3 py-1 bg-red-500/20 text-red-100 text-xs font-bold rounded-full border border-red-500/30 backdrop-blur-sm">15 Kanji</span>
-                <span className="px-3 py-1 bg-emerald-500/20 text-emerald-100 text-xs font-bold rounded-full border border-emerald-500/30 backdrop-blur-sm">30 Vocab</span>
+                <span className="px-3 py-1 bg-red-500/20 text-red-100 text-xs font-bold rounded-full border border-red-500/30 backdrop-blur-sm">{srsBreakdown.kanjiDue} Kanji</span>
+                <span className="px-3 py-1 bg-emerald-500/20 text-emerald-100 text-xs font-bold rounded-full border border-emerald-500/30 backdrop-blur-sm">{srsBreakdown.vocabDue} Vocab</span>
               </div>
               
               <h2 className="text-3xl font-black tracking-tight mb-2">You have {stats.reviewsDue} reviews due.</h2>
