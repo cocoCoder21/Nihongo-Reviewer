@@ -75,6 +75,19 @@ enum SrsContentType {
   KATAKANA
 }
 
+enum AudioTrackType {
+  BUNKEI
+  REIBUN
+  KOTOBA
+  KAIWA
+  RENSHU_C
+  MONDAI
+  YOMIMONO
+  CHOUKAI
+}
+
+
+
 enum SrsStatus {
   NEW
   LEARNING
@@ -161,6 +174,7 @@ model ShokyuGrammar {
   formation String @default("")
   rule      String
   examples  Json   @default("[]") // [{japanese, english}]
+  particles Json   @default("[]") // string[] — particles used in this grammar point
   sortOrder Int    @default(0)
 
   lesson ShokyuLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -209,6 +223,7 @@ model ChukyuGrammar {
   formation      String  @default("")
   rule           String
   examples       Json    @default("[]") // [{japanese, english}]
+  particles      Json    @default("[]") // string[] — particles used in this grammar point
   crossReference String? // link to shokyu grammar
   sortOrder      Int     @default(0)
 
@@ -230,6 +245,7 @@ model Kanji {
   mnemonic     String  @default("")
   radicalId    Int?
   radicalGroup String  @default("")
+  category     String  @default("") // e.g. "Numbers", "Time & Calendar", "Actions & Verbs"
 
   jlptLevel      JlptLevel        @relation(fields: [jlptLevelId], references: [id])
   radical        Radical?         @relation(fields: [radicalId], references: [id])
@@ -240,6 +256,7 @@ model Kanji {
   @@unique([jlptLevelId, character])
   @@index([jlptLevelId])
   @@index([radicalId])
+  @@index([jlptLevelId, category])
 }
 
 model KanjiVocabulary {
@@ -328,6 +345,7 @@ model Grammar {
   formation          String @default("")
   rule               String
   examples           Json   @default("[]") // [{japanese, english}]
+  particles          Json   @default("[]") // string[] — particles used in this grammar point
   sourceBook         String @default("")   // shokyu_1, shokyu_2, etc.
   sourceLessonNumber Int    @default(0)
 
@@ -360,12 +378,16 @@ model Vocabulary {
 // ─── Audio ────────────────────────────────────────────────────────
 
 model AudioTrack {
-  id           Int    @id @default(autoincrement())
-  bookId       String
-  lessonNumber Int
-  trackNumber  Int
-  filePath     String
-  fileName     String
+  id              Int            @id @default(autoincrement())
+  bookId          String
+  lessonNumber    Int
+  trackNumber     Int
+  filePath        String
+  fileName        String
+  trackType       AudioTrackType @default(MONDAI)
+  sectionLabel    String         @default("")
+  description     String?
+  scenarioContext String?
 
   book Book @relation(fields: [bookId], references: [id])
 
@@ -417,13 +439,13 @@ model User {
   streak             UserStreak?
   dailyActivity      DailyActivity[]
   studyBlocks        StudyBlock[]
+  contentFamiliarity ContentFamiliarity[]
 }
 
 model UserSettings {
   id                 Int     @id @default(autoincrement())
   userId             Int     @unique
   showRomaji         Boolean @default(false)
-  autoPlayAudio      Boolean @default(true)
   darkMode           Boolean @default(false)
   preferredStudyTime String?
 
@@ -598,4 +620,19 @@ model StudyBlock {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+}
+
+// ─── Content Familiarity ─────────────────────────────────────────
+
+model ContentFamiliarity {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  contentType String   // vocabulary, grammar, kanji, hiragana, katakana, listening
+  contentId   Int
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentType, contentId])
+  @@index([userId, contentType])
 }
