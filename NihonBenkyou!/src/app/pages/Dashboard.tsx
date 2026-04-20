@@ -1,5 +1,7 @@
-import { Flame, Play, ArrowRight, BrainCircuit, Type, FileType2, Calendar, Target, Zap, BookOpen } from 'lucide-react';
+import { Flame, Play, ArrowRight, BrainCircuit, Type, FileType2, Calendar, Target, Zap, BookOpen, Languages } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { useFamiliarityStore } from '../store/useFamiliarityStore';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -7,6 +9,7 @@ import { useEffect } from 'react';
 
 export const Dashboard = () => {
   const { user, stats, srsBreakdown, progress, weeklyActivity, dailyQuests, fetchStats, syncProgress, checkDailyReset } = useAppStore();
+  const authUser = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,7 +30,7 @@ export const Dashboard = () => {
       {/* Header Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Okaeri, {user.name}</h1>
+          <h1 className="text-3xl font-bold text-slate-800">Okaeri, {authUser?.displayName ?? user.name}</h1>
           <p className="text-slate-500 font-medium mt-1">Ready to master JLPT {user.level}?</p>
         </div>
 
@@ -152,28 +155,39 @@ export const Dashboard = () => {
             <h3 className="text-lg font-bold text-slate-800 mb-6">JLPT {user.level} Progress</h3>
             
             <div className="space-y-5">
-              <SkillProgress 
-                label="Vocabulary" 
-                current={progress.vocabulary.current} 
-                max={progress.vocabulary.max} 
-                color="bg-emerald-500" 
-                bgColor="bg-emerald-100" 
+              <FamiliarizedProgress
+                label="Kana"
+                familiarityTypes={['hiragana', 'katakana']}
+                fallbackMax={208}
+                color="bg-purple-500"
+                bgColor="bg-purple-100"
+                icon={<Languages className="w-4 h-4 text-purple-600" />}
+              />
+              <FamiliarizedProgress
+                label="Vocabulary"
+                familiarityTypes={['vocabulary']}
+                fallbackMax={progress.vocabulary.max}
+                backendCurrent={progress.vocabulary.current}
+                color="bg-emerald-500"
+                bgColor="bg-emerald-100"
                 icon={<FileType2 className="w-4 h-4 text-emerald-600" />}
               />
-              <SkillProgress 
-                label="Grammar" 
-                current={progress.grammar.current} 
-                max={progress.grammar.max} 
-                color="bg-blue-500" 
-                bgColor="bg-blue-100" 
+              <FamiliarizedProgress
+                label="Grammar"
+                familiarityTypes={['grammar']}
+                fallbackMax={progress.grammar.max}
+                backendCurrent={progress.grammar.current}
+                color="bg-blue-500"
+                bgColor="bg-blue-100"
                 icon={<Type className="w-4 h-4 text-blue-600" />}
               />
-              <SkillProgress 
-                label="Kanji" 
-                current={progress.kanji.current} 
-                max={progress.kanji.max} 
-                color="bg-red-500" 
-                bgColor="bg-red-100" 
+              <FamiliarizedProgress
+                label="Kanji"
+                familiarityTypes={['kanji']}
+                fallbackMax={progress.kanji.max}
+                backendCurrent={progress.kanji.current}
+                color="bg-red-500"
+                bgColor="bg-red-100"
                 icon={<BrainCircuit className="w-4 h-4 text-red-600" />}
               />
             </div>
@@ -186,7 +200,7 @@ export const Dashboard = () => {
 };
 
 const SkillProgress = ({ label, current, max, color, bgColor, icon }: { label: string, current: number, max: number, color: string, bgColor: string, icon: React.ReactNode }) => {
-  const percentage = Math.round((current / max) * 100);
+  const percentage = max > 0 ? Math.round((current / max) * 100) : 0;
   
   return (
     <div className="flex flex-col space-y-2">
@@ -231,6 +245,55 @@ const QuestItem = ({ title, current, max, reward, icon }: { title: string, curre
           <div className={`h-full rounded-full ${isComplete ? 'bg-brand-500' : 'bg-slate-400'}`} style={{ width: `${percentage}%` }} />
         </div>
         <span className="text-xs font-semibold text-slate-500">{current}/{max}</span>
+      </div>
+    </div>
+  );
+};
+
+const FamiliarizedProgress = ({
+  label,
+  familiarityTypes,
+  fallbackMax,
+  backendCurrent,
+  color,
+  bgColor,
+  icon,
+}: {
+  label: string;
+  familiarityTypes: string[];
+  fallbackMax: number;
+  backendCurrent?: number;
+  color: string;
+  bgColor: string;
+  icon: React.ReactNode;
+}) => {
+  const getCount = useFamiliarityStore((s) => s.getCount);
+  const familiarCount = familiarityTypes.reduce(
+    (sum, type) => sum + getCount(type as Parameters<typeof getCount>[0]),
+    0
+  );
+  const current = Math.max(familiarCount, backendCurrent ?? 0);
+  const max = fallbackMax;
+  const percentage = max > 0 ? Math.round((current / max) * 100) : 0;
+
+  return (
+    <div className="flex flex-col space-y-2">
+      <div className="flex justify-between items-center text-sm font-semibold">
+        <div className="flex items-center space-x-2 text-slate-700">
+          <div className={`p-1.5 rounded-lg ${bgColor}`}>
+            {icon}
+          </div>
+          <span>{label}</span>
+        </div>
+        <span className="text-slate-400">{current} / {max} <span className="text-slate-300 font-normal">({percentage}%)</span></span>
+      </div>
+      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className={`h-full rounded-full ${color}`}
+        />
       </div>
     </div>
   );

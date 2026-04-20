@@ -1,11 +1,30 @@
 import { useState, useEffect } from 'react';
-import { X, Volume2, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, MessageSquareQuote } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../store/useAppStore';
 import { contentService } from '../services/content.service';
 import { levelContent } from '../data/levels';
+import { FamiliarityButton } from '../components/FamiliarityButton';
 import type { VocabItem } from '../types';
+
+// Splits sentence and wraps the vocab word in a bold emerald span
+const highlightWord = (sentence: string, word: string) => {
+  if (!word) return <>{sentence}</>;
+  const parts = sentence.split(word);
+  return (
+    <>
+      {parts.map((part, i) => (
+        <span key={i}>
+          {part}
+          {i < parts.length - 1 && (
+            <span className="text-emerald-600 font-black">{word}</span>
+          )}
+        </span>
+      ))}
+    </>
+  );
+};
 
 export const VocabularyLesson = () => {
   const navigate = useNavigate();
@@ -77,6 +96,12 @@ export const VocabularyLesson = () => {
             transition={{ duration: 0.25 }}
             className="w-full max-w-lg"
           >
+            {current.lessonNumber ? (
+              <h1 className="text-2xl font-black text-center text-slate-800 mb-3">
+                Lesson {current.lessonNumber} Vocabularies
+              </h1>
+            ) : null}
+
             <div className="flex justify-center mb-6">
               <div className="bg-emerald-100 text-emerald-800 font-bold px-4 py-2 rounded-2xl flex items-center space-x-2 border border-emerald-200">
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -85,7 +110,10 @@ export const VocabularyLesson = () => {
             </div>
 
             {/* Word Display */}
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-brand-200/50 mb-6 text-center">
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-brand-200/50 mb-6 text-center relative">
+              <div className="absolute top-4 right-4">
+                <FamiliarityButton contentType="vocabulary" contentId={String(current.id)} />
+              </div>
               <h2 className="text-5xl md:text-6xl font-black text-slate-800 mb-4">{current.word}</h2>
               <p className="text-lg font-medium text-slate-400 mb-2">{current.reading}</p>
               <div className="w-12 h-1 bg-brand-200 rounded-full mx-auto mb-4" />
@@ -93,15 +121,22 @@ export const VocabularyLesson = () => {
             </div>
 
             {/* Example Sentence */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-brand-200/50 flex items-start space-x-4">
-              <button className="flex-shrink-0 w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-100 active:scale-95 transition-all">
-                <Volume2 className="w-5 h-5 fill-current" />
-              </button>
-              <div>
-                <p className="text-xl font-bold text-slate-800 mb-2">{current.example}</p>
+            {current.example ? (
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-brand-200/50">
+                <div className="flex items-center space-x-2 mb-3">
+                  <MessageSquareQuote className="w-4 h-4 text-emerald-500" />
+                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Example Sentence</span>
+                </div>
+                <p className="text-xl font-bold text-slate-800 mb-2 leading-relaxed">
+                  {highlightWord(current.example, current.word)}
+                </p>
                 <p className="text-base text-slate-500">{current.exampleMeaning}</p>
               </div>
-            </div>
+            ) : (
+              <div className="bg-white/60 p-6 rounded-3xl border border-dashed border-brand-200/80 text-center">
+                <p className="text-slate-400 text-sm font-medium">No example sentence available</p>
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>

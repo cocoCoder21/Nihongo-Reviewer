@@ -7,6 +7,7 @@ import { GrammarLesson } from "./pages/GrammarLesson";
 import { WritingLesson } from "./pages/WritingLesson";
 import { ListeningLesson } from "./pages/ListeningLesson";
 import { VocabularyLesson } from "./pages/VocabularyLesson";
+import { KanaLesson } from "./pages/KanaLesson";
 import { Quiz } from "./pages/Quiz";
 import { LevelSelect } from "./pages/LevelSelect";
 import { Practice } from "./pages/Practice";
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
       { path: "/learn/vocabulary", Component: VocabularyLesson },
       { path: "/learn/writing", Component: WritingLesson },
       { path: "/learn/listening", Component: ListeningLesson },
+      { path: "/learn/kana", Component: KanaLesson },
     ],
   },
 ]);

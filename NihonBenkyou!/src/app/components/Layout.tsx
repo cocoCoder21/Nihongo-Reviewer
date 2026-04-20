@@ -3,9 +3,11 @@ import { LayoutGrid, CheckSquare, BookOpen, Clock, UserCircle, Bell } from 'luci
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useAppStore } from '../store/useAppStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 export const AppLayout = () => {
   const { stats, user } = useAppStore();
+  const authUser = useAuthStore((s) => s.user);
 
   return (
     <div className="min-h-screen bg-brand-100 font-sans text-slate-900 flex flex-col md:flex-row selection:bg-brand-200 selection:text-brand-700 overflow-hidden">
@@ -37,7 +39,7 @@ export const AppLayout = () => {
             )}
           >
             <div className="w-10 h-10 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold text-sm">
-              {user.name.charAt(0)}
+              {(authUser?.displayName ?? user.name).charAt(0).toUpperCase()}
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-800">JLPT {user.level} Path</p>
