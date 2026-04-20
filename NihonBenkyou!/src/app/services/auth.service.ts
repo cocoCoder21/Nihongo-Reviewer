@@ -25,4 +25,8 @@ export const authService = {
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     return api.patch('/auth/password', { currentPassword, newPassword });
   },
+
+  async updateProfile(displayName: string): Promise<User> {
+    return api.patch<User>('/auth/profile', { displayName });
+  },
 };

@@ -6,6 +6,7 @@ import type {
   VocabItem,
   GrammarItem,
   KanjiItem,
+  KanjiCategory,
   Radical,
   KanaChar,
   AudioTrack,
@@ -39,8 +40,12 @@ export const contentService = {
   },
 
   // ─── Kanji ──────────────────────────────────────────────────────
-  async getKanji(level: JLPTLevel): Promise<KanjiItem[]> {
-    return api.get<KanjiItem[]>(`/levels/${level}/kanji`);
+  async getKanji(level: JLPTLevel, params?: { category?: string }): Promise<KanjiItem[]> {
+    return api.get<KanjiItem[]>(`/levels/${level}/kanji`, params);
+  },
+
+  async getKanjiCategories(level: JLPTLevel): Promise<KanjiCategory[]> {
+    return api.get<KanjiCategory[]>(`/levels/${level}/kanji/categories`);
   },
 
   // ─── Radicals ───────────────────────────────────────────────────
@@ -62,9 +67,18 @@ export const contentService = {
     return api.get<AudioTrack[]>(`/audio/${lessonId}`);
   },
 
+  async getAudioTracksByBook(bookId: string, lessonNumber: number): Promise<AudioTrack[]> {
+    return api.get<AudioTrack[]>('/audio/by-book', { bookId, lesson: String(lessonNumber) });
+  },
+
   getAudioUrl(lessonId: number, track: number): string {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
     return `${baseUrl}/audio/${lessonId}/${track}`;
+  },
+
+  getAudioStreamUrl(bookId: string, lessonNumber: number, trackNumber: number): string {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    return `${baseUrl}/audio/stream/${bookId}/${lessonNumber}/${trackNumber}`;
   },
 
   // ─── Quiz ───────────────────────────────────────────────────────
@@ -85,7 +99,6 @@ export const contentService = {
       vocabulary,
       grammar,
       kanji,
-      listening: [], // TODO: populate from audio + quiz data
     };
   },
 };

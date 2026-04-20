@@ -70,6 +70,7 @@ export interface GrammarItem {
   crossReference?: string | null;
   lessonNumber?: number;
   sourceBook?: BookId;
+  particles?: string[];
 }
 
 // ─── Kanji Types ──────────────────────────────────────────────────
@@ -84,9 +85,15 @@ export interface KanjiItem {
   strokeCount: number;
   mnemonic?: string;
   radicalId?: number | null;
+  category?: string;
   examples: string[];
   vocabulary?: { word: string; reading: string; meaning: string }[];
   exampleSentences?: { japanese: string; english: string }[];
+}
+
+export interface KanjiCategory {
+  name: string;
+  count: number;
 }
 
 // ─── Radical Types ────────────────────────────────────────────────
@@ -123,17 +130,9 @@ export interface KanaChar {
   exampleMeaning?: string;
 }
 
-// ─── Listening Types ──────────────────────────────────────────────
-
-export interface ListeningItem {
-  id: string;
-  sentence: string;
-  romaji: string;
-  meaning: string;
-  options: { id: string; text: string; correct: boolean }[];
-}
-
 // ─── Audio Types ──────────────────────────────────────────────────
+
+export type AudioTrackType = 'BUNKEI' | 'REIBUN' | 'KOTOBA' | 'KAIWA' | 'RENSHU_C' | 'MONDAI' | 'YOMIMONO' | 'CHOUKAI';
 
 export interface AudioTrack {
   id: number;
@@ -142,6 +141,10 @@ export interface AudioTrack {
   trackNumber: number;
   filePath: string;
   fileName: string;
+  trackType: AudioTrackType;
+  sectionLabel: string;
+  description?: string;
+  scenarioContext?: string;
 }
 
 // ─── Quiz Types ───────────────────────────────────────────────────
@@ -175,7 +178,6 @@ export interface User {
 
 export interface UserSettings {
   showRomaji: boolean;
-  autoPlayAudio: boolean;
   darkMode: boolean;
   preferredStudyTime?: string;
 }
@@ -269,6 +271,8 @@ export interface DashboardStats {
   cardsMastered: number;
   lessonsCompleted: number;
   quizzesCompleted: number;
+  todayLessonsCompleted: number;
+  todayReviewsCompleted: number;
 }
 
 export interface UserStreak {
@@ -309,7 +313,6 @@ export interface LevelContent {
   vocabulary: VocabItem[];
   grammar: GrammarItem[];
   kanji: KanjiItem[];
-  listening: ListeningItem[];
 }
 
 // ─── API Response Wrappers ────────────────────────────────────────

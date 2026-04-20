@@ -70,4 +70,18 @@ export const progressService = {
   async logStudySession(session: StudySessionRequest): Promise<void> {
     return api.post('/user/study-session', session);
   },
+
+  // ─── Familiarity ────────────────────────────────────────────────
+  async toggleFamiliarity(contentType: string, contentId: number): Promise<{ familiarized: boolean }> {
+    return api.post('/user/familiarity', { contentType, contentId });
+  },
+
+  async getFamiliarity(contentType?: string): Promise<{ contentType: string; contentId: number }[]> {
+    const params = contentType ? { contentType } : undefined;
+    return api.get('/user/familiarity', params);
+  },
+
+  async getFamiliarityCounts(): Promise<Record<string, number>> {
+    return api.get('/user/familiarity/counts');
+  },
 };
