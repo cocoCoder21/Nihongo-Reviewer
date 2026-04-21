@@ -3,7 +3,8 @@ import { persist } from 'zustand/middleware';
 import { type JLPTLevel, levelContent } from '../data/levels';
 import { progressService } from '../services/progress.service';
 
-export type CardCategory = 'vocabulary' | 'grammar' | 'kanji' | 'particle';
+export type CardCategory = 'vocabulary' | 'grammar' | 'kanji' | 'particle' | 'hiragana' | 'katakana';
+export type CategoryFilter = CardCategory | 'all' | 'kana';
 export type Difficulty = 'again' | 'hard' | 'good' | 'easy';
 
 export interface Card {
@@ -35,8 +36,8 @@ interface FlashcardStore {
   isFlipped: boolean;
   sessionStats: SessionStats;
   isSessionComplete: boolean;
-  categoryFilter: CardCategory | 'all';
-  setCategoryFilter: (filter: CardCategory | 'all') => void;
+  categoryFilter: CategoryFilter;
+  setCategoryFilter: (filter: CategoryFilter) => void;
   loadDeck: (level: JLPTLevel) => void;
   startReview: (level: JLPTLevel) => void;
   startApiReview: () => Promise<void>;
@@ -119,7 +120,7 @@ function calculateSRS(card: Card, difficulty: Difficulty): Partial<Card> {
     if (repetitions === 0) {
       interval = 1;
     } else if (repetitions === 1) {
-      interval = 6;
+      interval = 3;
     } else {
       interval = Math.round(interval * ease);
     }
@@ -143,7 +144,7 @@ export const useFlashcardStore = create<FlashcardStore>()(
       isFlipped: false,
       isSessionComplete: false,
       sessionStats: { total: 0, correct: 0, again: 0, hard: 0, good: 0, easy: 0 },
-      categoryFilter: 'all' as CardCategory | 'all',
+      categoryFilter: 'all' as CategoryFilter,
 
       setCategoryFilter: (filter) => set({ categoryFilter: filter }),
 
@@ -233,6 +234,8 @@ export const useFlashcardStore = create<FlashcardStore>()(
             VOCABULARY: 'vocabulary',
             GRAMMAR: 'grammar',
             KANJI: 'kanji',
+            HIRAGANA: 'hiragana',
+            KATAKANA: 'katakana',
           };
           let cards: Card[] = dueCards.map(c => ({
             id: String(c.id),
@@ -246,7 +249,9 @@ export const useFlashcardStore = create<FlashcardStore>()(
             nextReview: new Date(c.nextReview).getTime(),
             level: 'N5' as JLPTLevel, // level not critical for review
           }));
-          if (filter !== 'all') {
+          if (filter === 'kana') {
+            cards = cards.filter(c => c.category === 'hiragana' || c.category === 'katakana');
+          } else if (filter !== 'all') {
             cards = cards.filter(c => c.category === filter);
           }
           set({
