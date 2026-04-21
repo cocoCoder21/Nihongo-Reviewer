@@ -35,7 +35,7 @@ export const Login = () => {
           <div className="w-12 h-12 rounded-xl bg-brand-700 flex items-center justify-center text-white shadow-md">
             <span className="text-2xl font-bold leading-none mt-0.5">日</span>
           </div>
-          <span className="text-2xl font-bold tracking-tight text-slate-800">NihonGuide</span>
+          <span className="text-2xl font-bold tracking-tight text-slate-800">NihonBenkyou!</span>
         </div>
 
         {/* Card */}
@@ -120,7 +120,7 @@ export const Login = () => {
               <div className="w-full border-t border-brand-200/50" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-3 text-slate-400">New to NihonGuide?</span>
+              <span className="bg-white px-3 text-slate-400">New to NihonBenkyou!?</span>
             </div>
           </div>
 

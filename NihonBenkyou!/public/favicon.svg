@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" ry="14" fill="#C03939"/>
+  <!-- 日 kanji drawn as two rectangles (outer frame + inner divider) -->
+  <!-- Outer box -->
+  <rect x="16" y="10" width="32" height="44" rx="2" ry="2" fill="none" stroke="white" stroke-width="4.5"/>
+  <!-- Middle horizontal bar -->
+  <line x1="16" y1="32" x2="48" y2="32" stroke="white" stroke-width="4.5"/>
+</svg>

@@ -19,7 +19,7 @@ export const AppLayout = () => {
           <div className="w-10 h-10 rounded-xl bg-brand-700 flex items-center justify-center text-white shadow-sm">
             <span className="text-xl font-bold leading-none mt-0.5">日</span>
           </div>
-          <span className="text-xl font-bold tracking-tight text-slate-800">NihonGuide</span>
+          <span className="text-xl font-bold tracking-tight text-slate-800">NihonBenkyou!</span>
         </div>
 
         <nav className="flex-1 space-y-2">
@@ -58,7 +58,7 @@ export const AppLayout = () => {
             <div className="w-8 h-8 rounded-lg bg-brand-700 flex items-center justify-center text-white shadow-sm">
               <span className="text-base font-bold leading-none mt-0.5">日</span>
             </div>
-            <span className="font-bold text-lg tracking-tight text-slate-800">NihonGuide</span>
+            <span className="font-bold text-lg tracking-tight text-slate-800">NihonBenkyou!</span>
           </div>
           <div className="flex items-center space-x-4 text-slate-400">
             <Bell className="w-5 h-5" />

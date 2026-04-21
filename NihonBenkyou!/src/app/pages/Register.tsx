@@ -68,7 +68,7 @@ export const Register = () => {
           <div className="w-12 h-12 rounded-xl bg-brand-700 flex items-center justify-center text-white shadow-md">
             <span className="text-2xl font-bold leading-none mt-0.5">日</span>
           </div>
-          <span className="text-2xl font-bold tracking-tight text-slate-800">NihonGuide</span>
+          <span className="text-2xl font-bold tracking-tight text-slate-800">NihonBenkyou!</span>
         </div>
 
         {/* Card */}
