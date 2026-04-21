@@ -73,6 +73,7 @@ enum SrsContentType {
   KANJI
   HIRAGANA
   KATAKANA
+  RADICAL
 }
 
 enum AudioTrackType {
