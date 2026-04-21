@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/useAuthStore';
 export const AppLayout = () => {
   const { stats, user } = useAppStore();
   const authUser = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   return (
     <div className="min-h-screen bg-brand-100 font-sans text-slate-900 flex flex-col md:flex-row selection:bg-brand-200 selection:text-brand-700 overflow-hidden">

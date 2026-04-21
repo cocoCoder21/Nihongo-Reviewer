@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { useFlashcardStore, CardCategory } from '../store/useFlashcardStore';
+import { useFlashcardStore, type CardCategory } from '../store/useFlashcardStore';
 import { useAppStore } from '../store/useAppStore';
+import { progressService } from '../services/progress.service';
 import { RotateCw, Check, X, BrainCircuit, FastForward, Trophy, ArrowRight, RotateCcw } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -25,20 +26,23 @@ const categoryColors: Record<CardCategory, { bg: string, text: string, label: st
   vocabulary: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: 'Vocabulary' },
   kanji: { bg: 'bg-red-100', text: 'text-red-800', label: 'Kanji' },
   particle: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Particle' },
+  hiragana: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Hiragana' },
+  katakana: { bg: 'bg-violet-100', text: 'text-violet-800', label: 'Katakana' },
 };
 
 export const Flashcard = () => {
   const { sessionCards, currentIndex, isFlipped, isSessionComplete, sessionStats, flipCard, answerCard, startReview, startApiReview, resetSession } = useFlashcardStore();
-  const { user, addXp, completeReview } = useAppStore();
+  const { user, addXp, completeReview, fetchStats } = useAppStore();
   const navigate = useNavigate();
   const currentCard = sessionCards[currentIndex];
   const remaining = sessionCards.length - currentIndex;
 
   useEffect(() => {
-    if (sessionCards.length === 0) {
-      // Try API first, fall back to local
-      startApiReview().catch(() => startReview(user.level));
-    }
+    // Always re-fetch from the API when entering the Practice tab so newly
+    // familiarized items appear immediately without a manual page refresh.
+    startApiReview().catch(() => {
+      if (sessionCards.length === 0) startReview(user.level);
+    });
   }, []);
 
   useEffect(() => {
@@ -58,10 +62,15 @@ export const Flashcard = () => {
   }, [isFlipped, flipCard, answerCard, completeReview]);
 
   const handleAnswer = (difficulty: 'again' | 'hard' | 'good' | 'easy') => {
+    const card = sessionCards[currentIndex];
     answerCard(difficulty);
     completeReview();
     if (difficulty !== 'again') {
       addXp(difficulty === 'easy' ? 3 : difficulty === 'good' ? 2 : 1);
+    }
+    // Persist SRS interval to backend for API-sourced cards (numeric IDs)
+    if (card && Number.isFinite(Number(card.id))) {
+      progressService.submitReview({ cardId: Number(card.id), difficulty }).catch(() => {});
     }
   };
 
@@ -111,7 +120,20 @@ export const Flashcard = () => {
               <span>Review Again</span>
             </button>
             <button 
-              onClick={() => { resetSession(); navigate('/'); }}
+              onClick={() => {
+                // Compute total XP earned this session
+                const totalXp = sessionStats.hard * 1 + sessionStats.good * 2 + sessionStats.easy * 3;
+                // Log to backend so dailyActivity, streak, and XP chart update
+                progressService.logStudySession({
+                  type: 'REVIEW',
+                  xpEarned: totalXp,
+                  itemsStudied: sessionStats.total,
+                }).catch(() => {});
+                // Re-fetch stats so Dashboard reflects real backend values
+                fetchStats().catch(() => {});
+                resetSession();
+                navigate('/');
+              }}
               className="w-full py-4 px-6 bg-brand-700 text-white font-bold rounded-2xl hover:bg-brand-800 transition-all flex items-center justify-center space-x-2"
             >
               <span>Done</span>

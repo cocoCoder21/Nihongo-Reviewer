@@ -1,4 +1,4 @@
-import { Flame, Play, ArrowRight, BrainCircuit, Type, FileType2, Calendar, Target, Zap, BookOpen, Languages } from 'lucide-react';
+import { Flame, Play, BrainCircuit, Type, FileType2, Calendar, Zap, BookOpen, Languages } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useFamiliarityStore } from '../store/useFamiliarityStore';
@@ -8,7 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { useEffect } from 'react';
 
 export const Dashboard = () => {
-  const { user, stats, srsBreakdown, progress, weeklyActivity, dailyQuests, fetchStats, syncProgress, checkDailyReset } = useAppStore();
+  const { user, stats, srsBreakdown, progress, weeklyActivity, fetchStats, syncProgress, checkDailyReset } = useAppStore();
   const authUser = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
@@ -76,7 +76,8 @@ export const Dashboard = () => {
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-brand-500/40 rounded-full blur-3xl -ml-24 -mb-24"></div>
             
             <div className="relative z-10 flex flex-col items-start max-w-sm mb-6 md:mb-0">
-              <div className="flex space-x-2 mb-4">
+              <div className="flex flex-wrap gap-2 mb-4">
+                <span className="px-3 py-1 bg-purple-500/20 text-purple-100 text-xs font-bold rounded-full border border-purple-500/30 backdrop-blur-sm">{srsBreakdown.kanaDue} Kana</span>
                 <span className="px-3 py-1 bg-red-500/20 text-red-100 text-xs font-bold rounded-full border border-red-500/30 backdrop-blur-sm">{srsBreakdown.kanjiDue} Kanji</span>
                 <span className="px-3 py-1 bg-emerald-500/20 text-emerald-100 text-xs font-bold rounded-full border border-emerald-500/30 backdrop-blur-sm">{srsBreakdown.vocabDue} Vocab</span>
               </div>
@@ -125,31 +126,6 @@ export const Dashboard = () => {
 
         {/* Side Column */}
         <div className="space-y-6">
-          {/* Daily Quests */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-brand-200/50">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center mb-4">
-              <Target className="w-5 h-5 mr-2 text-brand-500" />
-              Daily Quests
-            </h3>
-            <div className="space-y-4">
-              {(dailyQuests ?? []).map((quest) => (
-                <QuestItem 
-                  key={quest.id}
-                  title={quest.title} 
-                  current={quest.current} 
-                  max={quest.max} 
-                  reward={quest.reward} 
-                  icon={
-                    quest.icon === 'xp' ? <Zap className="w-4 h-4 text-yellow-500" /> :
-                    quest.icon === 'review' ? <BrainCircuit className="w-4 h-4 text-red-500" /> :
-                    quest.icon === 'kanji' ? <BrainCircuit className="w-4 h-4 text-red-500" /> :
-                    <BookOpen className="w-4 h-4 text-blue-500" />
-                  } 
-                />
-              ))}
-            </div>
-          </div>
-
           {/* Progress Section */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-brand-200/50">
             <h3 className="text-lg font-bold text-slate-800 mb-6">JLPT {user.level} Progress</h3>
@@ -194,57 +170,6 @@ export const Dashboard = () => {
           </div>
         </div>
 
-      </div>
-    </div>
-  );
-};
-
-const SkillProgress = ({ label, current, max, color, bgColor, icon }: { label: string, current: number, max: number, color: string, bgColor: string, icon: React.ReactNode }) => {
-  const percentage = max > 0 ? Math.round((current / max) * 100) : 0;
-  
-  return (
-    <div className="flex flex-col space-y-2">
-      <div className="flex justify-between items-center text-sm font-semibold">
-        <div className="flex items-center space-x-2 text-slate-700">
-          <div className={`p-1.5 rounded-lg ${bgColor}`}>
-            {icon}
-          </div>
-          <span>{label}</span>
-        </div>
-        <span className="text-slate-400">{current} / {max} <span className="text-slate-300 font-normal">({percentage}%)</span></span>
-      </div>
-      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className={`h-full rounded-full ${color}`} 
-        />
-      </div>
-    </div>
-  );
-};
-
-const QuestItem = ({ title, current, max, reward, icon }: { title: string, current: number, max: number, reward: number, icon: React.ReactNode }) => {
-  const isComplete = current >= max;
-  const percentage = Math.min((current / max) * 100, 100);
-
-  return (
-    <div className={`p-3 rounded-2xl border ${isComplete ? 'bg-brand-50 border-brand-200' : 'bg-slate-50 border-slate-100'}`}>
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center space-x-2">
-          <div className="bg-white p-1 rounded shadow-sm">
-            {icon}
-          </div>
-          <p className={`text-sm font-bold ${isComplete ? 'text-brand-800' : 'text-slate-700'}`}>{title}</p>
-        </div>
-        <span className="text-xs font-bold text-orange-500 bg-orange-100 px-2 py-0.5 rounded-full">+{reward} XP</span>
-      </div>
-      <div className="flex items-center space-x-3">
-        <div className="h-1.5 flex-1 bg-slate-200 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full ${isComplete ? 'bg-brand-500' : 'bg-slate-400'}`} style={{ width: `${percentage}%` }} />
-        </div>
-        <span className="text-xs font-semibold text-slate-500">{current}/{max}</span>
       </div>
     </div>
   );

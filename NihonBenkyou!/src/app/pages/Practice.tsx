@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Flashcard } from '../components/Flashcard';
 import { X, BarChart } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useFlashcardStore, type CardCategory } from '../store/useFlashcardStore';
+import { useFlashcardStore, type CategoryFilter } from '../store/useFlashcardStore';
 import { useAppStore } from '../store/useAppStore';
 
-const filterOptions: { value: CardCategory | 'all'; label: string }[] = [
+const filterOptions: { value: CategoryFilter; label: string }[] = [
   { value: 'all', label: 'All' },
+  { value: 'kana', label: 'Kana' },
   { value: 'vocabulary', label: 'Vocab' },
   { value: 'grammar', label: 'Grammar' },
   { value: 'kanji', label: 'Kanji' },
@@ -16,9 +17,14 @@ export const Practice = () => {
   const navigate = useNavigate();
   const [showStats, setShowStats] = useState(false);
   const { categoryFilter, setCategoryFilter, startApiReview, startReview, sessionStats } = useFlashcardStore();
-  const { user, stats } = useAppStore();
+  const { user, stats, fetchStats } = useAppStore();
 
-  const handleFilterChange = (filter: CardCategory | 'all') => {
+  useEffect(() => {
+    // Sync historical reviewsDue / cardsMastered / streak from backend on mount
+    fetchStats().catch(() => {});
+  }, [fetchStats]);
+
+  const handleFilterChange = (filter: CategoryFilter) => {
     setCategoryFilter(filter);
     startApiReview().catch(() => startReview(user.level));
   };

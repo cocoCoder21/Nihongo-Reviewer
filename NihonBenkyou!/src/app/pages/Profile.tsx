@@ -1,17 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useFamiliarityStore } from '../store/useFamiliarityStore';
 import { ArrowLeft, Edit2, LogOut, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 export const Profile = () => {
-  const { user, stats, settings, updateSettings, resetProgress } = useAppStore();
+  const { user, stats, settings, updateSettings, resetProgress, fetchStats } = useAppStore();
   const { user: authUser, updateDisplayName, logout } = useAuthStore();
+  const familiar = useFamiliarityStore((s) => s.familiar);
   const navigate = useNavigate();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [nameSaving, setNameSaving] = useState(false);
   const [nameError, setNameError] = useState('');
+
+  // Keep stats fresh when navigating directly to Profile
+  useEffect(() => { fetchStats(); }, []);
+
+  // Total cards familiarized = sum of all content types
+  const cardsFamiliarized = Object.values(familiar).reduce((sum, ids) => sum + ids.length, 0);
 
   const displayName = authUser?.displayName ?? user.name;
 
@@ -105,7 +113,11 @@ export const Profile = () => {
         ) : (
           <>
             <h2 className="text-2xl font-bold text-slate-800">{displayName}</h2>
-            <p className="text-slate-500 font-medium mt-1">Joined {user.joined}</p>
+            <p className="text-slate-500 font-medium mt-1">
+              Joined {authUser?.createdAt
+                ? new Date(authUser.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                : user.joined}
+            </p>
           </>
         )}
       </div>
@@ -140,23 +152,19 @@ export const Profile = () => {
           </div>
         </section>
 
-        {/* Visuals */}
-        <section>
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 px-2">Visuals</h3>
-          <div className="bg-white rounded-3xl shadow-sm border border-brand-200/50 overflow-hidden divide-y divide-brand-100">
-            <ToggleRow label="Show Romaji alongside Kanji" active={settings.showRomaji} onToggle={() => updateSettings({ showRomaji: !settings.showRomaji })} />
-            <ToggleRow label="Enable Dark Mode" active={settings.darkMode} onToggle={() => updateSettings({ darkMode: !settings.darkMode })} />
-          </div>
-        </section>
-
         {/* Stats */}
         <section>
           <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 px-2">Statistics</h3>
           <div className="bg-white rounded-3xl shadow-sm border border-brand-200/50 p-6 grid grid-cols-2 gap-6">
-            <StatBox label="Total Study Time" value={`${stats.totalStudyHours}h`} />
-            <StatBox label="Cards Mastered" value={stats.cardsMastered.toString()} />
-            <StatBox label="Longest Streak" value={`${stats.streak} Days`} />
-            <StatBox label="Current Level" value={user.level} />
+            <StatBox
+              label="Total Study Time"
+              value={stats.totalStudyHours < 1 && stats.totalStudyHours > 0
+                ? `${Math.round(stats.totalStudyHours * 60)} min`
+                : `${stats.totalStudyHours}h`}
+            />
+            <StatBox label="Cards Familiarized" value={cardsFamiliarized.toString()} />
+            <StatBox label="Day Streak" value={`${stats.streak} Days`} />
+            <StatBox label="Best Streak" value={`${stats.longestStreak} Days`} />
           </div>
         </section>
 

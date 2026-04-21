@@ -38,7 +38,7 @@ export interface LevelContent {
 }
 
 export const levelInfo: Record<JLPTLevel, { label: string; description: string; vocabCount: number; kanjiCount: number; grammarCount: number }> = {
-  N5: { label: 'Beginner', description: 'Basic greetings, numbers, and simple sentences', vocabCount: 800, kanjiCount: 100, grammarCount: 80 },
+  N5: { label: 'Beginner', description: 'Basic greetings, numbers, and simple sentences', vocabCount: 751, kanjiCount: 100, grammarCount: 80 },
   N4: { label: 'Elementary', description: 'Daily conversation and basic reading', vocabCount: 1500, kanjiCount: 300, grammarCount: 165 },
   N3: { label: 'Intermediate', description: 'Everyday situations and general topics', vocabCount: 3750, kanjiCount: 600, grammarCount: 250 },
   N2: { label: 'Upper Intermediate', description: 'News, articles, and natural conversation', vocabCount: 6000, kanjiCount: 1000, grammarCount: 350 },

@@ -136,7 +136,7 @@ export const WritingLesson = () => {
       if (categoryName === 'Radicals') {
         const radicals = await contentService.getRadicals();
         const mapped: KanjiItem[] = radicals.map((r) => ({
-          id: `rad-${r.id}`,
+          id: String(r.id),
           kanji: r.character,
           reading: r.name,
           meaning: r.meaning,
@@ -383,7 +383,10 @@ export const WritingLesson = () => {
           {/* Main kanji display */}
           <div className="flex flex-col items-center mb-8 relative">
             <div className="absolute top-0 right-0">
-              <FamiliarityButton contentType="kanji" contentId={String(currentKanji.id)} />
+              <FamiliarityButton
+                contentType={selectedCategory === 'Radicals' ? 'radical' : 'kanji'}
+                contentId={String(currentKanji.id)}
+              />
             </div>
             <motion.div
               key={currentKanji.id}
