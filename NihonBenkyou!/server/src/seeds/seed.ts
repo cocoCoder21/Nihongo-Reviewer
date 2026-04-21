@@ -47,7 +47,7 @@ function log(msg: string) {
 async function runSubScript(relPath: string) {
   const { spawnSync } = await import('child_process');
   const scriptPath = resolve(import.meta.dirname, relPath);
-  const result = spawnSync('npx', ['tsx', scriptPath], {
+  const result = spawnSync('npx', ['tsx', `"${scriptPath}"`], {
     stdio: 'inherit',
     shell: true,
     cwd: resolve(import.meta.dirname, '..', '..'),

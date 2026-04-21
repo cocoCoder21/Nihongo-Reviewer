@@ -81,6 +81,24 @@ router.patch('/blocks/:id', async (req: Request, res: Response) => {
       },
     });
 
+    // When completion status changes, update DailyActivity.minutesStudied
+    if (completed !== undefined && completed !== block.completed) {
+      const blockDate = new Date(block.date);
+      blockDate.setHours(0, 0, 0, 0);
+      const blockDuration = duration !== undefined ? Number(duration) : block.duration;
+      const minutesDelta = completed ? blockDuration : -blockDuration;
+
+      await prisma.dailyActivity.upsert({
+        where: { userId_date: { userId: req.user!.userId, date: blockDate } },
+        update: { minutesStudied: { increment: minutesDelta } },
+        create: {
+          userId: req.user!.userId,
+          date: blockDate,
+          minutesStudied: Math.max(0, minutesDelta),
+        },
+      });
+    }
+
     res.json(updated);
   } catch (err) {
     console.error('PATCH /planner/blocks/:id error:', err);
