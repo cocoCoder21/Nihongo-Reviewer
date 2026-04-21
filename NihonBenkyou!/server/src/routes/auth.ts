@@ -84,13 +84,13 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      res.status(404).json({ message: 'User does not exist. Please create an account.' });
+      res.status(401).json({ message: 'Invalid email or password' });
       return;
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      res.status(401).json({ message: 'Incorrect password. Please try again.' });
+      res.status(401).json({ message: 'Invalid email or password' });
       return;
     }
 
