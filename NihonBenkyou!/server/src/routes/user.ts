@@ -257,13 +257,18 @@ router.get('/srs/due', async (req: Request, res: Response) => {
       take: 50,
     });
 
-    // Enrich cards with content info
-    const enriched = await Promise.all(
+    // Enrich cards with content info. If a card's content row is missing
+    // (orphaned SrsCard pointing at a deleted/non-existent content row),
+    // we delete the orphan so it never reaches the client as a blank card.
+    const orphanIds: number[] = [];
+
+    const enrichedRaw = await Promise.all(
       cards.map(async (card) => {
         let front = '';
         let reading = '';
         let meaning = '';
         let category = card.contentType.toLowerCase();
+        let found = false;
 
         if (card.contentType === 'VOCABULARY') {
           const vocab = await prisma.vocabulary.findUnique({ where: { id: card.contentId } });
@@ -271,6 +276,7 @@ router.get('/srs/due', async (req: Request, res: Response) => {
             front = vocab.word;
             reading = vocab.reading;
             meaning = vocab.meaning;
+            found = true;
           }
         } else if (card.contentType === 'GRAMMAR') {
           const grammar = await prisma.grammar.findUnique({ where: { id: card.contentId } });
@@ -278,13 +284,15 @@ router.get('/srs/due', async (req: Request, res: Response) => {
             front = grammar.pattern;
             reading = '';
             meaning = grammar.rule;
+            found = true;
           }
         } else if (card.contentType === 'KANJI') {
           const kanji = await prisma.kanji.findUnique({ where: { id: card.contentId } });
-          if (kanji) {
+          if (kanji && kanji.character) {
             front = kanji.character;
-            reading = `${kanji.onyomi} / ${kanji.kunyomi}`;
-            meaning = kanji.meanings;
+            reading = `${kanji.onyomi || ''}${kanji.kunyomi ? ' / ' + kanji.kunyomi : ''}`.trim();
+            meaning = kanji.meanings || '';
+            found = true;
           }
         } else if (card.contentType === 'HIRAGANA') {
           const kana = await prisma.hiragana.findUnique({ where: { id: card.contentId } });
@@ -293,6 +301,7 @@ router.get('/srs/due', async (req: Request, res: Response) => {
             reading = kana.romaji;
             meaning = kana.romaji;
             category = 'hiragana';
+            found = true;
           }
         } else if (card.contentType === 'KATAKANA') {
           const kana = await prisma.katakana.findUnique({ where: { id: card.contentId } });
@@ -301,7 +310,25 @@ router.get('/srs/due', async (req: Request, res: Response) => {
             reading = kana.romaji;
             meaning = kana.romaji;
             category = 'katakana';
+            found = true;
           }
+        } else if (card.contentType === 'RADICAL') {
+          const rad = await prisma.radical.findUnique({ where: { id: card.contentId } });
+          if (rad) {
+            front = rad.character;
+            reading = rad.name;
+            meaning = rad.meaning;
+            category = 'radical';
+            found = true;
+          }
+        }
+
+        if (!found || !front) {
+          console.warn(
+            `[srs/due] Orphaned SrsCard id=${card.id} contentType=${card.contentType} contentId=${card.contentId} — removing.`
+          );
+          orphanIds.push(card.id);
+          return null;
         }
 
         return {
@@ -321,6 +348,12 @@ router.get('/srs/due', async (req: Request, res: Response) => {
         };
       })
     );
+
+    if (orphanIds.length > 0) {
+      await prisma.srsCard.deleteMany({ where: { id: { in: orphanIds } } });
+    }
+
+    const enriched = enrichedRaw.filter((c): c is NonNullable<typeof c> => c !== null);
 
     res.json(enriched);
   } catch (err) {
@@ -359,7 +392,7 @@ router.post('/srs/review', async (req: Request, res: Response) => {
       interval = 0;
     } else {
       if (repetitions === 0) interval = 1;
-      else if (repetitions === 1) interval = 6;
+      else if (repetitions === 1) interval = 3;
       else interval = Math.round(interval * easeFactor);
       repetitions += 1;
     }
@@ -549,8 +582,28 @@ router.get('/streak', async (req: Request, res: Response) => {
       where: { userId: req.user!.userId },
     });
 
+    // Compute effective current streak — expire if last study wasn't today or yesterday
+    let effectiveStreak = 0;
+    if (streak?.lastStudyDate) {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      const lastStr = streak.lastStudyDate.toISOString().split('T')[0];
+      if (lastStr === todayStr || lastStr === yesterdayStr) {
+        effectiveStreak = streak.currentStreak;
+      } else {
+        // Streak broken — persist the reset so stats stay consistent
+        await prisma.userStreak.update({
+          where: { userId: req.user!.userId },
+          data: { currentStreak: 0 },
+        });
+      }
+    }
+
     res.json({
-      currentStreak: streak?.currentStreak ?? 0,
+      currentStreak: effectiveStreak,
       longestStreak: streak?.longestStreak ?? 0,
       lastStudyDate: streak?.lastStudyDate?.toISOString(),
       totalStudyDays: streak?.totalStudyDays ?? 0,
@@ -650,29 +703,35 @@ router.post('/study-session', async (req: Request, res: Response) => {
     });
 
     // Update streak
+    const todayStr = today.toISOString().split('T')[0];
     const streak = await prisma.userStreak.findUnique({ where: { userId } });
-    if (streak) {
-      const lastDate = streak.lastStudyDate;
-      const todayStr = today.toISOString().split('T')[0];
-      const lastStr = lastDate?.toISOString().split('T')[0];
 
-      if (lastStr !== todayStr) {
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+    // Determine if today's study was already counted
+    const lastStr = streak?.lastStudyDate?.toISOString().split('T')[0];
+    if (lastStr !== todayStr) {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-        const newStreak = lastStr === yesterdayStr ? streak.currentStreak + 1 : 1;
+      const newStreak = lastStr === yesterdayStr ? (streak?.currentStreak ?? 0) + 1 : 1;
+      const newLongest = Math.max(streak?.longestStreak ?? 0, newStreak);
 
-        await prisma.userStreak.update({
-          where: { userId },
-          data: {
-            currentStreak: newStreak,
-            longestStreak: Math.max(streak.longestStreak, newStreak),
-            lastStudyDate: today,
-            totalStudyDays: { increment: 1 },
-          },
-        });
-      }
+      await prisma.userStreak.upsert({
+        where: { userId },
+        update: {
+          currentStreak: newStreak,
+          longestStreak: newLongest,
+          lastStudyDate: today,
+          totalStudyDays: { increment: 1 },
+        },
+        create: {
+          userId,
+          currentStreak: 1,
+          longestStreak: 1,
+          lastStudyDate: today,
+          totalStudyDays: 1,
+        },
+      });
     }
 
     res.status(204).send();
@@ -684,9 +743,21 @@ router.post('/study-session', async (req: Request, res: Response) => {
 
 // ─── Content Familiarity ──────────────────────────────────────────
 
-const VALID_CONTENT_TYPES = ['vocabulary', 'grammar', 'kanji', 'hiragana', 'katakana'];
+const VALID_CONTENT_TYPES = ['vocabulary', 'grammar', 'kanji', 'hiragana', 'katakana', 'radical'];
+
+// Map from lowercase contentType → SrsContentType enum value
+const SRS_CONTENT_TYPE_MAP: Record<string, 'VOCABULARY' | 'GRAMMAR' | 'KANJI' | 'HIRAGANA' | 'KATAKANA' | 'RADICAL'> = {
+  vocabulary: 'VOCABULARY',
+  grammar: 'GRAMMAR',
+  kanji: 'KANJI',
+  hiragana: 'HIRAGANA',
+  katakana: 'KATAKANA',
+  radical: 'RADICAL',
+};
 
 // POST /user/familiarity — toggle familiarity for a content item
+// When toggling ON, an SrsCard is also created (upserted) so the item
+// immediately appears in the Practice tab review queue.
 router.post('/familiarity', async (req: Request, res: Response) => {
   try {
     const { contentType, contentId } = req.body;
@@ -704,6 +775,34 @@ router.post('/familiarity', async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     const numericContentId = Number(contentId);
 
+    if (!Number.isFinite(numericContentId) || numericContentId <= 0) {
+      res.status(400).json({ message: 'contentId must be a positive integer' });
+      return;
+    }
+
+    // Verify the referenced content row actually exists before creating any
+    // familiarity / SrsCard records. This prevents orphaned cards that would
+    // render as blank in the Practice tab.
+    let contentExists = false;
+    if (contentType === 'vocabulary') {
+      contentExists = !!(await prisma.vocabulary.findUnique({ where: { id: numericContentId }, select: { id: true } }));
+    } else if (contentType === 'grammar') {
+      contentExists = !!(await prisma.grammar.findUnique({ where: { id: numericContentId }, select: { id: true } }));
+    } else if (contentType === 'kanji') {
+      contentExists = !!(await prisma.kanji.findUnique({ where: { id: numericContentId }, select: { id: true } }));
+    } else if (contentType === 'hiragana') {
+      contentExists = !!(await prisma.hiragana.findUnique({ where: { id: numericContentId }, select: { id: true } }));
+    } else if (contentType === 'katakana') {
+      contentExists = !!(await prisma.katakana.findUnique({ where: { id: numericContentId }, select: { id: true } }));
+    } else if (contentType === 'radical') {
+      contentExists = !!(await prisma.radical.findUnique({ where: { id: numericContentId }, select: { id: true } }));
+    }
+
+    if (!contentExists) {
+      res.status(404).json({ message: `${contentType} with id ${numericContentId} not found` });
+      return;
+    }
+
     // Check if already familiarized
     const existing = await prisma.contentFamiliarity.findUnique({
       where: {
@@ -716,20 +815,40 @@ router.post('/familiarity', async (req: Request, res: Response) => {
     });
 
     if (existing) {
-      // Toggle off — remove
+      // Toggle off — remove familiarity (SrsCard is kept so SRS progress isn't lost)
       await prisma.contentFamiliarity.delete({
         where: { id: existing.id },
       });
       res.json({ familiarized: false });
     } else {
-      // Toggle on — create
-      await prisma.contentFamiliarity.create({
-        data: {
-          userId,
-          contentType,
-          contentId: numericContentId,
-        },
-      });
+      // Toggle on — create familiarity record AND enqueue an SRS card
+      const srsContentType = SRS_CONTENT_TYPE_MAP[contentType];
+
+      await Promise.all([
+        prisma.contentFamiliarity.create({
+          data: { userId, contentType, contentId: numericContentId },
+        }),
+        srsContentType
+          ? prisma.srsCard.upsert({
+              where: {
+                userId_contentType_contentId: {
+                  userId,
+                  contentType: srsContentType,
+                  contentId: numericContentId,
+                },
+              },
+              // Do not reset an existing card's progress — leave it as-is
+              update: {},
+              create: {
+                userId,
+                contentType: srsContentType,
+                contentId: numericContentId,
+                // nextReview defaults to now() → immediately due
+              },
+            })
+          : Promise.resolve(),
+      ]);
+
       res.json({ familiarized: true });
     }
   } catch (err) {
