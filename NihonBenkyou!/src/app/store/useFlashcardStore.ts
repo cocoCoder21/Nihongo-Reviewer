@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { type JLPTLevel, levelContent } from '../data/levels';
 import { progressService } from '../services/progress.service';
 
-export type CardCategory = 'vocabulary' | 'grammar' | 'kanji' | 'particle' | 'hiragana' | 'katakana';
+export type CardCategory = 'vocabulary' | 'grammar' | 'kanji' | 'particle' | 'hiragana' | 'katakana' | 'radical';
 export type CategoryFilter = CardCategory | 'all' | 'kana';
 export type Difficulty = 'again' | 'hard' | 'good' | 'easy';
 
@@ -236,6 +236,7 @@ export const useFlashcardStore = create<FlashcardStore>()(
             KANJI: 'kanji',
             HIRAGANA: 'hiragana',
             KATAKANA: 'katakana',
+            RADICAL: 'radical',
           };
           let cards: Card[] = dueCards.map(c => ({
             id: String(c.id),
@@ -251,6 +252,9 @@ export const useFlashcardStore = create<FlashcardStore>()(
           }));
           if (filter === 'kana') {
             cards = cards.filter(c => c.category === 'hiragana' || c.category === 'katakana');
+          } else if (filter === 'kanji') {
+            // Radicals are kanji components — surface them under the Kanji filter too.
+            cards = cards.filter(c => c.category === 'kanji' || c.category === 'radical');
           } else if (filter !== 'all') {
             cards = cards.filter(c => c.category === filter);
           }

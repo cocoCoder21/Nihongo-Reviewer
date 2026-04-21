@@ -22,6 +22,9 @@ export const Practice = () => {
   useEffect(() => {
     // Sync historical reviewsDue / cardsMastered / streak from backend on mount
     fetchStats().catch(() => {});
+    // Load due cards immediately so Practice isn't empty until a filter is clicked.
+    startApiReview().catch(() => startReview(user.level));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchStats]);
 
   const handleFilterChange = (filter: CategoryFilter) => {

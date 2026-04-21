@@ -755,9 +755,10 @@ const SRS_CONTENT_TYPE_MAP: Record<string, 'VOCABULARY' | 'GRAMMAR' | 'KANJI' | 
   radical: 'RADICAL',
 };
 
-// POST /user/familiarity — toggle familiarity for a content item
-// When toggling ON, an SrsCard is also created (upserted) so the item
-// immediately appears in the Practice tab review queue.
+// POST /user/familiarity — mark a content item as familiarized (one-way).
+// Idempotent: re-calling for an already-familiar item is a no-op. Creates a
+// ContentFamiliarity row and upserts an SrsCard so the item appears in the
+// Practice tab review queue. Familiarity cannot be removed via this endpoint.
 router.post('/familiarity', async (req: Request, res: Response) => {
   try {
     const { contentType, contentId } = req.body;
@@ -815,42 +816,41 @@ router.post('/familiarity', async (req: Request, res: Response) => {
     });
 
     if (existing) {
-      // Toggle off — remove familiarity (SrsCard is kept so SRS progress isn't lost)
-      await prisma.contentFamiliarity.delete({
-        where: { id: existing.id },
-      });
-      res.json({ familiarized: false });
-    } else {
-      // Toggle on — create familiarity record AND enqueue an SRS card
-      const srsContentType = SRS_CONTENT_TYPE_MAP[contentType];
+      // Already familiar — idempotent no-op. Familiarize is one-way; once an
+      // item is in the review queue it stays there until SRS marks it MASTERED.
+      res.json({ familiarized: true });
+      return;
+    }
 
-      await Promise.all([
-        prisma.contentFamiliarity.create({
-          data: { userId, contentType, contentId: numericContentId },
-        }),
-        srsContentType
-          ? prisma.srsCard.upsert({
-              where: {
-                userId_contentType_contentId: {
-                  userId,
-                  contentType: srsContentType,
-                  contentId: numericContentId,
-                },
-              },
-              // Do not reset an existing card's progress — leave it as-is
-              update: {},
-              create: {
+    // First time — create familiarity record AND enqueue an SRS card
+    const srsContentType = SRS_CONTENT_TYPE_MAP[contentType];
+
+    await Promise.all([
+      prisma.contentFamiliarity.create({
+        data: { userId, contentType, contentId: numericContentId },
+      }),
+      srsContentType
+        ? prisma.srsCard.upsert({
+            where: {
+              userId_contentType_contentId: {
                 userId,
                 contentType: srsContentType,
                 contentId: numericContentId,
-                // nextReview defaults to now() → immediately due
               },
-            })
-          : Promise.resolve(),
-      ]);
+            },
+            // Do not reset an existing card's progress — leave it as-is
+            update: {},
+            create: {
+              userId,
+              contentType: srsContentType,
+              contentId: numericContentId,
+              // nextReview defaults to now() → immediately due
+            },
+          })
+        : Promise.resolve(),
+    ]);
 
-      res.json({ familiarized: true });
-    }
+    res.json({ familiarized: true });
   } catch (err) {
     console.error('Toggle familiarity error:', err);
     res.status(500).json({ message: 'Internal server error' });

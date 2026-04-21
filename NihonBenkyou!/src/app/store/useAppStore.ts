@@ -291,20 +291,36 @@ export const useAppStore = create<AppState>()(
 
       syncProgress: async () => {
         try {
-          const allProgress = await progressService.getProgress();
+          const [allProgress, familiarityCounts] = await Promise.all([
+            progressService.getProgress(),
+            progressService.getFamiliarityCounts(),
+          ]);
           const state = get();
           const levelProgress = allProgress.find(
             (p) => p.jlptLevelId === state.user.level
           );
-          if (levelProgress) {
-            set({
-              progress: {
-                vocabulary: { current: levelProgress.vocabMastered, max: state.progress.vocabulary.max },
-                grammar: { current: levelProgress.grammarMastered, max: state.progress.grammar.max },
-                kanji: { current: levelProgress.kanjiMastered, max: state.progress.kanji.max },
+          // Always re-derive max from levelInfo so any stale persisted values
+          // (e.g. an old default of 800 cached in localStorage) are corrected.
+          const info = levelInfo[state.user.level];
+          set({
+            progress: {
+              // Prefer familiarity counts from the backend as they are kept up-to-date
+              // by the familiarity toggle endpoint. Fall back to UserProgress mastery
+              // fields (which may be 0 until a dedicated rollup is implemented).
+              vocabulary: {
+                current: familiarityCounts['vocabulary'] ?? (levelProgress?.vocabMastered ?? 0),
+                max: info.vocabCount,
               },
-            });
-          }
+              grammar: {
+                current: familiarityCounts['grammar'] ?? (levelProgress?.grammarMastered ?? 0),
+                max: info.grammarCount,
+              },
+              kanji: {
+                current: familiarityCounts['kanji'] ?? (levelProgress?.kanjiMastered ?? 0),
+                max: info.kanjiCount,
+              },
+            },
+          });
         } catch {
           // Silently fail — local data remains as fallback
         }

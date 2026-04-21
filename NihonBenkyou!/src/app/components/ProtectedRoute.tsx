@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { useAuthStore } from '../store/useAuthStore';
+import { useFamiliarityStore } from '../store/useFamiliarityStore';
 
 export const ProtectedRoute = () => {
   const { isAuthenticated, isInitialized, checkAuth, isLoading } = useAuthStore();
+  const syncFamiliarity = useFamiliarityStore((s) => s.syncFromBackend);
   const location = useLocation();
 
   useEffect(() => {
@@ -11,6 +13,16 @@ export const ProtectedRoute = () => {
       checkAuth();
     }
   }, [isInitialized, checkAuth]);
+
+  // Once authenticated, pull the canonical familiarity list from the backend
+  // so any stale localStorage entries (e.g. from a previous DB seed where ids
+  // differ) are overwritten. Without this, FamiliarityButton can render as
+  // green for items the server has never seen, and clicks become no-ops.
+  useEffect(() => {
+    if (isAuthenticated && isInitialized) {
+      syncFamiliarity().catch(() => {});
+    }
+  }, [isAuthenticated, isInitialized, syncFamiliarity]);
 
   // Show loading while checking auth status
   if (!isInitialized || isLoading) {

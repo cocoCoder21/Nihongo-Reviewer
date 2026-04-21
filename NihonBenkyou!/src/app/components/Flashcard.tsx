@@ -28,22 +28,25 @@ const categoryColors: Record<CardCategory, { bg: string, text: string, label: st
   particle: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Particle' },
   hiragana: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Hiragana' },
   katakana: { bg: 'bg-violet-100', text: 'text-violet-800', label: 'Katakana' },
+  radical: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Radical' },
 };
 
 export const Flashcard = () => {
-  const { sessionCards, currentIndex, isFlipped, isSessionComplete, sessionStats, flipCard, answerCard, startReview, startApiReview, resetSession } = useFlashcardStore();
+  const { sessionCards, currentIndex, isFlipped, isSessionComplete, sessionStats, categoryFilter, flipCard, answerCard, startReview, startApiReview, resetSession } = useFlashcardStore();
   const { user, addXp, completeReview, fetchStats } = useAppStore();
   const navigate = useNavigate();
   const currentCard = sessionCards[currentIndex];
   const remaining = sessionCards.length - currentIndex;
 
   useEffect(() => {
-    // Always re-fetch from the API when entering the Practice tab so newly
-    // familiarized items appear immediately without a manual page refresh.
+    // Always re-fetch from the API when entering the Practice tab OR when the
+    // active filter changes so newly familiarized items appear immediately
+    // without a manual page refresh.
     startApiReview().catch(() => {
       if (sessionCards.length === 0) startReview(user.level);
     });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

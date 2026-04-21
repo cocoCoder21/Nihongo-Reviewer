@@ -10,12 +10,14 @@ import { useEffect } from 'react';
 export const Dashboard = () => {
   const { user, stats, srsBreakdown, progress, weeklyActivity, fetchStats, syncProgress, checkDailyReset } = useAppStore();
   const authUser = useAuthStore((s) => s.user);
+  const syncFamiliarityFromBackend = useFamiliarityStore((s) => s.syncFromBackend);
   const navigate = useNavigate();
 
   useEffect(() => {
     checkDailyReset();
     fetchStats();
     syncProgress();
+    syncFamiliarityFromBackend();
   }, []);
 
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

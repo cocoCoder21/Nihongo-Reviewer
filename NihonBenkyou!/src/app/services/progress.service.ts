@@ -72,7 +72,9 @@ export const progressService = {
   },
 
   // ─── Familiarity ────────────────────────────────────────────────
-  async toggleFamiliarity(contentType: string, contentId: number): Promise<{ familiarized: boolean }> {
+  // One-way: marks an item as familiarized. Idempotent on the server —
+  // calling it for an already-familiar item is a no-op.
+  async markFamiliar(contentType: string, contentId: number): Promise<{ familiarized: boolean }> {
     return api.post('/user/familiarity', { contentType, contentId });
   },
 
