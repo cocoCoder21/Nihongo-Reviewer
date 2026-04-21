@@ -178,7 +178,6 @@ export interface User {
 
 export interface UserSettings {
   showRomaji: boolean;
-  darkMode: boolean;
   preferredStudyTime?: string;
 }
 

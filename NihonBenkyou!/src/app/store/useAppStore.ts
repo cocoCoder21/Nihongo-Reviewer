@@ -7,7 +7,6 @@ export type UserType = 'student' | 'professional';
 
 interface Settings {
   showRomaji: boolean;
-  darkMode: boolean;
   dailyGoal: number; // XP
   srsStrictness: 'relaxed' | 'normal' | 'strict';
   userType: UserType;
@@ -31,6 +30,7 @@ interface SrsBreakdown {
   kanjiDue: number;
   vocabDue: number;
   grammarDue: number;
+  kanaDue: number;
 }
 
 interface AppState {
@@ -41,6 +41,7 @@ interface AppState {
   };
   stats: {
     streak: number;
+    longestStreak: number;
     xp: number;
     xpGoal: number;
     reviewsDue: number;
@@ -113,6 +114,7 @@ export const useAppStore = create<AppState>()(
       },
       stats: {
         streak: 0,
+        longestStreak: 0,
         xp: 0,
         xpGoal: 50,
         reviewsDue: 0,
@@ -121,15 +123,14 @@ export const useAppStore = create<AppState>()(
         lessonsCompleted: 0,
         quizzesCompleted: 0,
       },
-      srsBreakdown: { kanjiDue: 0, vocabDue: 0, grammarDue: 0 },
+      srsBreakdown: { kanjiDue: 0, vocabDue: 0, grammarDue: 0, kanaDue: 0 },
       progress: {
-        vocabulary: { current: 0, max: 800 },
+        vocabulary: { current: 0, max: 751 },
         grammar: { current: 0, max: 80 },
         kanji: { current: 0, max: 100 },
       },
       settings: {
         showRomaji: false,
-        darkMode: false,
         dailyGoal: 50,
         srsStrictness: 'normal',
         userType: 'student',
@@ -196,11 +197,16 @@ export const useAppStore = create<AppState>()(
 
       updateSettings: (partial) => set((state) => ({
         settings: { ...state.settings, ...partial },
+        // Keep stats.xpGoal in sync when dailyGoal changes
+        ...(partial.dailyGoal !== undefined
+          ? { stats: { ...state.stats, xpGoal: partial.dailyGoal } }
+          : {}),
       })),
 
       resetProgress: () => set((state) => ({
         stats: {
           streak: 0,
+          longestStreak: 0,
           xp: 0,
           xpGoal: state.settings.dailyGoal,
           reviewsDue: 0,
@@ -209,7 +215,7 @@ export const useAppStore = create<AppState>()(
           lessonsCompleted: 0,
           quizzesCompleted: 0,
         },
-        srsBreakdown: { kanjiDue: 0, vocabDue: 0, grammarDue: 0 },
+        srsBreakdown: { kanjiDue: 0, vocabDue: 0, grammarDue: 0, kanaDue: 0 },
         progress: getProgressForLevel(state.user.level),
         dailyQuests: defaultQuests,
         questResetDate: todayDateStr(),
@@ -237,12 +243,13 @@ export const useAppStore = create<AppState>()(
           ]);
 
           // Compute SRS breakdown from due cards
-          const breakdown: SrsBreakdown = { kanjiDue: 0, vocabDue: 0, grammarDue: 0 };
+          const breakdown: SrsBreakdown = { kanjiDue: 0, vocabDue: 0, grammarDue: 0, kanaDue: 0 };
           for (const card of dueCards) {
             const ct = (card.contentType || '').toUpperCase();
             if (ct === 'KANJI') breakdown.kanjiDue++;
             else if (ct === 'VOCABULARY') breakdown.vocabDue++;
             else if (ct === 'GRAMMAR') breakdown.grammarDue++;
+            else if (ct === 'HIRAGANA' || ct === 'KATAKANA') breakdown.kanaDue++;
           }
 
           // Map weekly activity — API returns {date, xpEarned, ...}
@@ -258,6 +265,7 @@ export const useAppStore = create<AppState>()(
             stats: {
               ...state.stats,
               streak: streak.currentStreak,
+              longestStreak: streak.longestStreak,
               xp: stats.xp,                        // Today's XP from backend
               xpGoal: stats.xpGoal,
               totalStudyHours: stats.totalStudyHours,
