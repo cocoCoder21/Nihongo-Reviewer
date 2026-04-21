@@ -1,0 +1,16 @@
+# Railway deployment configuration for the NihonBenkyou! Express + Prisma server.
+# Place Railway service Root Directory at: minna-no-nihongo-reviewer/NihonBenkyou!/server
+# See: https://docs.railway.com/reference/config-as-code
+
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install && npm run build && npx prisma generate"
+
+[deploy]
+# Apply pending Prisma migrations before starting the server.
+# `migrate deploy` is idempotent — safe to run on every deploy.
+startCommand = "npx prisma migrate deploy && node dist/index.js"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

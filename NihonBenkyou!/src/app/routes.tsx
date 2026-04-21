@@ -45,4 +45,10 @@ export const router = createBrowserRouter([
       { path: "/learn/kana", Component: KanaLesson },
     ],
   },
-]);
+], {
+  // In production the app is served under /nihonbenkyou (proxied from
+  // angeliephl.dev). VITE_APP_BASE_PATH is set on Vercel Production only.
+  // Vercel Preview and local dev fall back to '/'. Trailing slash stripped
+  // because basename must not end in '/'.
+  basename: (import.meta.env.VITE_APP_BASE_PATH ?? '/').replace(/\/$/, '') || '/',
+});
