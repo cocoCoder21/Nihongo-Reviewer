@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Flashcard } from '../components/Flashcard';
-import { X, BarChart } from 'lucide-react';
+import { X, BarChart, Flame } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useFlashcardStore, type CategoryFilter } from '../store/useFlashcardStore';
 import { useAppStore } from '../store/useAppStore';
@@ -75,10 +75,22 @@ export const Practice = () => {
             <div><p className="text-lg font-black text-emerald-600">{sessionStats.good}</p><p className="text-[10px] font-bold text-emerald-400">Good</p></div>
             <div><p className="text-lg font-black text-blue-600">{sessionStats.easy}</p><p className="text-[10px] font-bold text-blue-400">Easy</p></div>
           </div>
-          <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500 font-medium">
-            <span>Reviews Due: {stats.reviewsDue}</span>
-            <span>Mastered: {stats.cardsMastered}</span>
-            <span>Streak: {stats.streak}🔥</span>
+          <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-sm font-black text-slate-600">{stats.reviewsDue}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reviews Due</p>
+            </div>
+            <div>
+              <p className="text-sm font-black text-slate-600">{stats.cardsMastered}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mastered</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1">
+                <Flame className="w-3.5 h-3.5 text-orange-500 fill-current" />
+                <p className="text-sm font-black text-slate-600">{stats.streak}</p>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Day Streak</p>
+            </div>
           </div>
         </div>
       )}
