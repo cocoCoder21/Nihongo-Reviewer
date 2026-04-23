@@ -3,7 +3,6 @@
 # See: https://docs.railway.com/reference/config-as-code
 
 [build]
-builder = "NIXPACKS"
 buildCommand = "npm install && npm run build && npx prisma generate"
 
 [deploy]
