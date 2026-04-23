@@ -40,9 +40,9 @@ You are the **Guardrail Agent** — a safety monitor that validates all code cha
 
 | Agent | Allowed Files | Violations |
 |-------|--------------|------------|
-| frontend-engineer | `NihonBenkyou!/src/**` | Cannot modify `server/`, `prisma/`, markdown data |
-| backend-engineer | `NihonBenkyou!/server/src/**` | Cannot modify `src/app/`, prisma schema |
-| database-engineer | `NihonBenkyou!/server/prisma/**`, `server/src/seeds/**` | Cannot modify routes, components |
+| frontend-engineer | `NihonBenkyou/src/**` | Cannot modify `server/`, `prisma/`, markdown data |
+| backend-engineer | `NihonBenkyou/server/src/**` | Cannot modify `src/app/`, prisma schema |
+| database-engineer | `NihonBenkyou/server/prisma/**`, `server/src/seeds/**` | Cannot modify routes, components |
 | auth-security | Auth-related files only | Cannot modify lesson/quiz logic |
 | progress-tracker | Progress-related files only | Cannot modify auth or content |
 

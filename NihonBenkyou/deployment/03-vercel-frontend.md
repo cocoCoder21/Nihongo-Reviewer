@@ -5,7 +5,7 @@
 1. [vercel.com/new](https://vercel.com/new) → import your GitHub repo
 2. Set **Root Directory** to:
    ```
-   minna-no-nihongo-reviewer/NihonBenkyou!
+   minna-no-nihongo-reviewer/NihonBenkyou
    ```
 
 ## 3.2 — Confirm build settings

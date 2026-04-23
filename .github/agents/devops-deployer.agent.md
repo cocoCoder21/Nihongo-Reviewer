@@ -25,7 +25,7 @@ Browser
 
 ## Authoritative Documentation
 
-All deployment docs live in `NihonBenkyou!/deployment/`. **Read them before answering deployment questions.**
+All deployment docs live in `NihonBenkyou/deployment/`. **Read them before answering deployment questions.**
 
 | File | Purpose |
 |---|---|
@@ -39,7 +39,7 @@ All deployment docs live in `NihonBenkyou!/deployment/`. **Read them before answ
 
 ## Tech Stack — Full Context
 
-### Frontend (`NihonBenkyou!/`)
+### Frontend (`NihonBenkyou/`)
 - React 18 + TypeScript + Vite 6
 - React Router v7 (`createBrowserRouter`) — `basename` set from `VITE_APP_BASE_PATH`
 - Vite `base` option set from `VITE_APP_BASE_PATH` (build time)
@@ -47,7 +47,7 @@ All deployment docs live in `NihonBenkyou!/deployment/`. **Read them before answ
 - Build output: `dist/`
 - SPA rewrite in `vercel.json`: `/(.*) → /index.html`
 
-### Backend (`NihonBenkyou!/server/`)
+### Backend (`NihonBenkyou/server/`)
 - Node 20+ (declared in `engines`), Express 5, TypeScript 6
 - Entry: `server/src/index.ts` → compiled to `server/dist/index.js`
 - Port: `process.env.PORT || 3001`
@@ -70,7 +70,7 @@ The seed script reads markdown content from outside the `server/` folder. Railwa
 
 ```powershell
 $env:DATABASE_URL = "postgresql://postgres:XXXX@XXXX.proxy.rlwy.net:NNNNN/railway"
-cd "minna-no-nihongo-reviewer/NihonBenkyou!/server"
+cd "minna-no-nihongo-reviewer/NihonBenkyou/server"
 npm run db:seed
 Remove-Item Env:DATABASE_URL  # clean up
 ```
@@ -101,12 +101,12 @@ CORS_ORIGIN=https://angeliephl.dev
 
 ### Railway service settings
 
-- **Root Directory**: `minna-no-nihongo-reviewer/NihonBenkyou!/server`
-- **Watch Paths**: `minna-no-nihongo-reviewer/NihonBenkyou!/server/**`
+- **Root Directory**: `minna-no-nihongo-reviewer/NihonBenkyou/server`
+- **Watch Paths**: `minna-no-nihongo-reviewer/NihonBenkyou/server/**`
 
 ## Vercel Configuration (NihonBenkyou project)
 
-- **Root Directory**: `minna-no-nihongo-reviewer/NihonBenkyou!`
+- **Root Directory**: `minna-no-nihongo-reviewer/NihonBenkyou`
 - **Framework**: Vite (auto-detected)
 - **Build**: `npm run build` → `dist`
 - **`vercel.json`**: SPA catch-all rewrite
@@ -135,7 +135,7 @@ These must be added **before** any catch-all rules in the portfolio's `vercel.js
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| 404 on page refresh of `/learn/grammar` | Missing SPA rewrite in `NihonBenkyou!/vercel.json` | Add `{"source":"/(.*)","destination":"/index.html"}` to rewrites |
+| 404 on page refresh of `/learn/grammar` | Missing SPA rewrite in `NihonBenkyou/vercel.json` | Add `{"source":"/(.*)","destination":"/index.html"}` to rewrites |
 | Assets 404: `/assets/...` not found | `VITE_APP_BASE_PATH` not set on Vercel **or** rebuild not triggered after setting it | Set on Production, redeploy |
 | Blank page at `angeliephl.dev/nihonbenkyou` | React Router has no `basename` | Confirm `routes.tsx` reads `import.meta.env.VITE_APP_BASE_PATH` |
 | CORS errors in console | `CORS_ORIGIN` mismatch on Railway | Set `CORS_ORIGIN=https://angeliephl.dev` (no trailing slash, no path) |

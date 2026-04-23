@@ -34,9 +34,9 @@ Strip filler words, articles, prepositions. Rewrite verbose prompts into dense k
 ### 2. File Path Shortcuts
 | Full Path | Short |
 |-----------|-------|
-| `NihonBenkyou!/src/app/` | `src/app/` |
-| `NihonBenkyou!/server/src/` | `server/src/` |
-| `NihonBenkyou!/server/prisma/schema.prisma` | `schema.prisma` |
+| `NihonBenkyou/src/app/` | `src/app/` |
+| `NihonBenkyou/server/src/` | `server/src/` |
+| `NihonBenkyou/server/prisma/schema.prisma` | `schema.prisma` |
 | `src/app/components/ui/` | `ui/` |
 | `src/app/store/` | `store/` |
 

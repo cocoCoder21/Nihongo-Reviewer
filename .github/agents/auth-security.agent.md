@@ -43,11 +43,11 @@ You are an **Auth & Security Specialist** for NihonBenkyou!. Your job is to impl
 
 ## Related Files
 
-- `NihonBenkyou!/server/src/routes/auth.ts` — Auth route definitions
-- `NihonBenkyou!/server/src/controllers/auth.ts` — Auth handlers
-- `NihonBenkyou!/server/src/middleware/auth.ts` — JWT verification middleware
-- `NihonBenkyou!/server/prisma/schema.prisma` — User model
-- `NihonBenkyou!/src/app/store/useAppStore.ts` — Frontend user state
+- `NihonBenkyou/server/src/routes/auth.ts` — Auth route definitions
+- `NihonBenkyou/server/src/controllers/auth.ts` — Auth handlers
+- `NihonBenkyou/server/src/middleware/auth.ts` — JWT verification middleware
+- `NihonBenkyou/server/prisma/schema.prisma` — User model
+- `NihonBenkyou/src/app/store/useAppStore.ts` — Frontend user state
 
 ## Constraints
 

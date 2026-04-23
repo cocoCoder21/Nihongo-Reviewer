@@ -20,7 +20,7 @@ You are an **Expert Frontend Engineer** for NihonBenkyou!. Your job is to build 
 ## Project Structure
 
 ```
-NihonBenkyou!/src/
+NihonBenkyou/src/
 ├── main.tsx                    # Entry point → <App />
 ├── app/
 │   ├── App.tsx                 # RouterProvider wrapper
@@ -80,6 +80,6 @@ NihonBenkyou!/src/
 
 - DO NOT modify Prisma schema or backend server code.
 - DO NOT edit markdown data files in `shokyu/`, `chukyu/`, `Kanji/`.
-- ONLY work within `NihonBenkyou!/src/` and frontend config files.
+- ONLY work within `NihonBenkyou/src/` and frontend config files.
 - When creating new pages, always add the route in `routes.tsx`.
 - Match existing code style — check neighboring files before writing.

@@ -1,5 +1,5 @@
 # Railway deployment configuration for the NihonBenkyou! Express + Prisma server.
-# Place Railway service Root Directory at: minna-no-nihongo-reviewer/NihonBenkyou!/server
+# Place Railway service Root Directory at: minna-no-nihongo-reviewer/NihonBenkyou/server
 # See: https://docs.railway.com/reference/config-as-code
 
 [build]

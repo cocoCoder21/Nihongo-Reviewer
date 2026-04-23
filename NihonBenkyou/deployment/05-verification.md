@@ -24,7 +24,7 @@ Run through this checklist after all four deployment steps are complete.
   Fail → confirm `VITE_APP_BASE_PATH=/nihonbenkyou/` was set on Vercel **before** the build ran (env var changes require a redeploy).
 
 - [ ] **Direct route navigation**: Hard-refresh on `https://angeliephl.dev/nihonbenkyou/learn/grammar` → page renders (not 404).
-  Fail → confirm `NihonBenkyou!/vercel.json` has the `/(.*) → /index.html` rewrite.
+  Fail → confirm `NihonBenkyou/vercel.json` has the `/(.*) → /index.html` rewrite.
 
 - [ ] **In-app navigation**: Click through routes. Browser URL shows `/nihonbenkyou/learn`, `/nihonbenkyou/practice`, etc.
   Fail → confirm `VITE_APP_BASE_PATH` was set in Vercel **Production** only.

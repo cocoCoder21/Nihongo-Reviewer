@@ -12,8 +12,8 @@ In the service **Settings** tab:
 
 | Setting | Value |
 |---|---|
-| **Root Directory** | `minna-no-nihongo-reviewer/NihonBenkyou!/server` |
-| **Watch Paths** | `minna-no-nihongo-reviewer/NihonBenkyou!/server/**` |
+| **Root Directory** | `minna-no-nihongo-reviewer/NihonBenkyou/server` |
+| **Watch Paths** | `minna-no-nihongo-reviewer/NihonBenkyou/server/**` |
 
 > Watch paths prevent unnecessary rebuilds when only the frontend or markdown content changes.
 
@@ -84,7 +84,7 @@ curl https://api.angeliephl.dev/api/health
 2. In your local terminal:
 
    ```bash
-   cd "minna-no-nihongo-reviewer/NihonBenkyou!/server"
+   cd "minna-no-nihongo-reviewer/NihonBenkyou/server"
 
    # Replace with your actual Railway public DB URL
    $env:DATABASE_URL = "postgresql://postgres:XXXX@XXXX.proxy.rlwy.net:NNNNN/railway"

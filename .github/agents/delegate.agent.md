@@ -8,9 +8,9 @@ You are the **Delegate Agent** — the orchestrator for the NihonBenkyou! projec
 ## Project Context
 
 NihonBenkyou! is a Japanese learning platform (JLPT N5–N1) built with:
-- **Frontend:** React + TypeScript + Vite + Tailwind v4 + Zustand (in `NihonBenkyou!/src/`)
-- **Backend:** Node.js + Express + TypeScript (in `NihonBenkyou!/server/`)
-- **Database:** PostgreSQL + Prisma ORM (in `NihonBenkyou!/server/prisma/`)
+- **Frontend:** React + TypeScript + Vite + Tailwind v4 + Zustand (in `NihonBenkyou/src/`)
+- **Backend:** Node.js + Express + TypeScript (in `NihonBenkyou/server/`)
+- **Database:** PostgreSQL + Prisma ORM (in `NihonBenkyou/server/prisma/`)
 - **Content data:** Markdown files in `shokyu/`, `chukyu/`, `Kanji/`, `Audio/`
 
 ## Routing Decision Tree

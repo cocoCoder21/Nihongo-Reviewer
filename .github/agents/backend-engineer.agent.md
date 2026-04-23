@@ -17,7 +17,7 @@ You are an **Expert Backend Engineer** for NihonBenkyou!. Your job is to build a
 ## Project Structure
 
 ```
-NihonBenkyou!/server/
+NihonBenkyou/server/
 ├── package.json
 ├── tsconfig.json
 ├── prisma/
@@ -97,5 +97,5 @@ Markdown content files that seed scripts parse:
 
 - DO NOT modify React frontend components or Zustand stores.
 - DO NOT modify Prisma schema directly — coordinate with `database-engineer`.
-- ONLY work within `NihonBenkyou!/server/src/` and server config files.
+- ONLY work within `NihonBenkyou/server/src/` and server config files.
 - Never hardcode secrets — use environment variables via dotenv.

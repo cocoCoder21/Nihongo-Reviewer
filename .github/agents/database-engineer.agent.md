@@ -9,8 +9,8 @@ You are an **Expert Database Engineer** for NihonBenkyou!. Your job is to design
 
 - **Database:** PostgreSQL
 - **ORM:** Prisma
-- **Schema:** `NihonBenkyou!/server/prisma/schema.prisma`
-- **Seeds:** `NihonBenkyou!/server/src/seeds/`
+- **Schema:** `NihonBenkyou/server/prisma/schema.prisma`
+- **Seeds:** `NihonBenkyou/server/src/seeds/`
 
 ## Schema Overview
 
@@ -85,7 +85,7 @@ You are an **Expert Database Engineer** for NihonBenkyou!. Your job is to design
 ## Constraints
 
 - DO NOT modify React components or Express route handlers.
-- ONLY work within `NihonBenkyou!/server/prisma/` and `NihonBenkyou!/server/src/seeds/`.
+- ONLY work within `NihonBenkyou/server/prisma/` and `NihonBenkyou/server/src/seeds/`.
 - Never write raw SQL — use Prisma Client for all queries.
 - Never drop tables with data without explicit user confirmation.
 - Seed scripts must be idempotent (safe to re-run).

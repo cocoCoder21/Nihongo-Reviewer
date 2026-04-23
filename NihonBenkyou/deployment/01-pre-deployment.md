@@ -53,7 +53,7 @@ Both [`package.json`](../package.json) and [`server/package.json`](../server/pac
 Run this **once** locally before the first Railway deploy:
 
 ```bash
-cd "minna-no-nihongo-reviewer/NihonBenkyou!/server"
+cd "minna-no-nihongo-reviewer/NihonBenkyou/server"
 npx prisma migrate dev --name init
 ```
 
