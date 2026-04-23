@@ -3,7 +3,7 @@
 # See: https://docs.railway.com/reference/config-as-code
 
 [build]
-buildCommand = "npm install && npm run build && npx prisma generate"
+buildCommand = "npm install && npm run build"
 
 [deploy]
 # Apply pending Prisma migrations before starting the server.
