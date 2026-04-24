@@ -41,12 +41,15 @@ const authLimiter = rateLimit({
 });
 
 // ─── Health check ─────────────────────────────────────────────────
+// Always return 200 so Railway considers the deployment healthy.
+// DB status is reported in the body — a disconnected DB should not
+// take the server out of rotation (Railway would 502 all requests).
 app.get('/api/health', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok', database: 'connected' });
   } catch {
-    res.status(503).json({ status: 'error', database: 'disconnected' });
+    res.json({ status: 'ok', database: 'disconnected' });
   }
 });
 
