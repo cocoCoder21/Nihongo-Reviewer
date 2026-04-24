@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, apiUrl } from './api';
 import type {
   JLPTLevel,
   LevelInfo,
@@ -72,13 +72,11 @@ export const contentService = {
   },
 
   getAudioUrl(lessonId: number, track: number): string {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-    return `${baseUrl}/audio/${lessonId}/${track}`;
+    return apiUrl(`/audio/${lessonId}/${track}`);
   },
 
   getAudioStreamUrl(bookId: string, lessonNumber: number, trackNumber: number): string {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-    return `${baseUrl}/audio/stream/${bookId}/${lessonNumber}/${trackNumber}`;
+    return apiUrl(`/audio/stream/${bookId}/${lessonNumber}/${trackNumber}`);
   },
 
   // ─── Quiz ───────────────────────────────────────────────────────

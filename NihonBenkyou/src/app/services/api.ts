@@ -1,19 +1,18 @@
 import type { ApiError } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE = (import.meta.env.VITE_API_URL || '/nihonbenkyou/api').replace(/\/+$/, '');
+
+export function apiUrl(path: string): string {
+  const clean = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE}${clean}`;
+}
 
 class ApiClient {
-  private baseUrl: string;
-
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
-  }
-
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const url = apiUrl(endpoint);
 
     const config: RequestInit = {
       credentials: 'include', // Send httpOnly cookies
@@ -77,7 +76,7 @@ class ApiClient {
 
   private async refreshToken(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+      const response = await fetch(apiUrl('/auth/refresh'), {
         method: 'POST',
         credentials: 'include',
       });
@@ -117,4 +116,4 @@ class ApiClient {
   }
 }
 
-export const api = new ApiClient(API_BASE_URL);
+export const api = new ApiClient();
