@@ -15,6 +15,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx src/seeds/seed.ts",
+    "db:seed-audio": "tsx prisma/seed-audio.ts",
     "db:seed-examples": "tsx src/seeds/seed-examples.ts",
     "db:reset-familiarity": "tsx scripts/reset-familiarity.ts",
     "db:check": "tsx scripts/check-db.ts"

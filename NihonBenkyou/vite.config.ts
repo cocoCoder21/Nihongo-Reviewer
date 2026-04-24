@@ -18,9 +18,12 @@ function figmaAssetResolver() {
 
 export default defineConfig({
   // Base path for the app. In production it is served under /nihonbenkyou/
-  // (proxied from angeliephl.dev). Set via env var so preview deploys at /
-  // still work. Must end with a trailing slash.
-  base: process.env.VITE_APP_BASE_PATH ?? '/',
+  // (proxied from angeliephl.dev). VERCEL_ENV guards against preview deploys
+  // inheriting the production base path and breaking asset resolution.
+  // Must end with a trailing slash.
+  base: process.env.VERCEL_ENV === 'production'
+    ? (process.env.VITE_APP_BASE_PATH ?? '/')
+    : '/',
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if
