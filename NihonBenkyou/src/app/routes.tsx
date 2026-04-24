@@ -1,3 +1,7 @@
+// Injected by vite.config.ts via `define`. Points to /nihonbenkyou in
+// production (Vercel) and / everywhere else. Declared here to satisfy TS.
+declare const __ROUTER_BASENAME__: string;
+
 import { createBrowserRouter } from "react-router";
 import { AppLayout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -46,9 +50,5 @@ export const router = createBrowserRouter([
     ],
   },
 ], {
-  // In production the app is served under /nihonbenkyou (proxied from
-  // angeliephl.dev). VITE_APP_BASE_PATH is set on Vercel Production only.
-  // Vercel Preview and local dev fall back to '/'. Trailing slash stripped
-  // because basename must not end in '/'.
-  basename: (import.meta.env.VITE_APP_BASE_PATH ?? '/').replace(/\/$/, '') || '/',
+  basename: __ROUTER_BASENAME__,
 });
