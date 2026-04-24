@@ -8,7 +8,7 @@ buildCommand = "npm install && npm run build"
 [deploy]
 # Apply pending Prisma migrations once before the new container takes traffic.
 # `migrate deploy` is idempotent — safe to run on every deploy.
-preDeployCommand = "if [ -n $DATABASE_URL ]; then npx prisma migrate deploy || true; else echo migration skipped; fi"
+preDeployCommand = "echo Skipping migrations"
 startCommand = "node dist/index.js"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 60
