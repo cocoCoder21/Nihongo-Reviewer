@@ -37,16 +37,18 @@ export function verifyRefreshToken(token: string): JwtPayload {
 
 export function setTokenCookies(res: Response, access: string, refresh: string): void {
   const isProduction = process.env.NODE_ENV === 'production';
+  const sameSite = isProduction ? 'none' : 'lax';
+
   res.cookie('access_token', access, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax',
+    sameSite,
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
   res.cookie('refresh_token', refresh, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax',
+    sameSite,
     path: '/api/auth/refresh',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
