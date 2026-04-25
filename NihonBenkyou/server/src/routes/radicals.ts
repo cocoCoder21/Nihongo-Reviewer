@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import { cache, TTL_STATIC } from '../lib/cache.js';
 
 const router = Router();
 
@@ -7,6 +8,14 @@ const router = Router();
 router.get('/', async (req: Request, res: Response) => {
   try {
     const { category, position } = req.query;
+
+    const cacheKey = `radicals:${category ?? ''}:${position ?? ''}`;
+    const cached = cache.get<object[]>(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
 
     const where: Record<string, unknown> = {};
     if (category) where.semanticCategory = category as string;
@@ -27,6 +36,8 @@ router.get('/', async (req: Request, res: Response) => {
       semanticCategory: r.semanticCategory,
     }));
 
+    cache.set(cacheKey, result, TTL_STATIC);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
     res.json(result);
   } catch (err) {
     console.error('Get radicals error:', err);

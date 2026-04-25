@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import { cache, TTL_LONG } from '../lib/cache.js';
 
 const router = Router();
 
@@ -12,18 +13,39 @@ router.get('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    // Try shokyu first
-    const shokyuLesson = await prisma.shokyuLesson.findUnique({
-      where: { id },
-      include: {
-        book: true,
-        vocabulary: { orderBy: { sortOrder: 'asc' } },
-        grammar: { orderBy: { sortOrder: 'asc' } },
-      },
-    });
+    const cacheKey = `lesson:${id}`;
+    const cached = cache.get<object>(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
+
+    // Fetch shokyu and chukyu in parallel — avoids a sequential round-trip
+    // for chukyu lessons where the shokyu query would always come back empty.
+    const [shokyuLesson, chukyuLesson] = await Promise.all([
+      prisma.shokyuLesson.findUnique({
+        where: { id },
+        include: {
+          book: true,
+          vocabulary: { orderBy: { sortOrder: 'asc' } },
+          grammar: { orderBy: { sortOrder: 'asc' } },
+        },
+      }),
+      prisma.chukyuLesson.findUnique({
+        where: { id },
+        include: {
+          book: true,
+          vocabulary: { orderBy: { sortOrder: 'asc' } },
+          grammar: { orderBy: { sortOrder: 'asc' } },
+        },
+      }),
+    ]);
+
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
 
     if (shokyuLesson) {
-      res.json({
+      const result = {
         id: shokyuLesson.id,
         bookId: shokyuLesson.book.id,
         lessonNumber: shokyuLesson.lessonNumber,
@@ -64,22 +86,14 @@ router.get('/:id', async (req: Request, res: Response) => {
             sourceBook: shokyuLesson.book.name,
           };
         }),
-      });
+      };
+      cache.set(cacheKey, result, TTL_LONG);
+      res.json(result);
       return;
     }
 
-    // Try chukyu
-    const chukyuLesson = await prisma.chukyuLesson.findUnique({
-      where: { id },
-      include: {
-        book: true,
-        vocabulary: { orderBy: { sortOrder: 'asc' } },
-        grammar: { orderBy: { sortOrder: 'asc' } },
-      },
-    });
-
     if (chukyuLesson) {
-      res.json({
+      const result = {
         id: chukyuLesson.id,
         bookId: chukyuLesson.book.id,
         lessonNumber: chukyuLesson.lessonNumber,
@@ -121,7 +135,9 @@ router.get('/:id', async (req: Request, res: Response) => {
             sourceBook: chukyuLesson.book.name,
           };
         }),
-      });
+      };
+      cache.set(cacheKey, result, TTL_LONG);
+      res.json(result);
       return;
     }
 

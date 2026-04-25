@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import { cache, TTL_STATIC } from '../lib/cache.js';
 
 const router = Router();
 
@@ -7,6 +8,14 @@ const router = Router();
 router.get('/hiragana', async (req: Request, res: Response) => {
   try {
     const { type } = req.query;
+
+    const cacheKey = `hiragana:${type ?? ''}`;
+    const cached = cache.get<object[]>(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
 
     const where: Record<string, unknown> = {};
     if (type) where.type = type as string;
@@ -29,6 +38,8 @@ router.get('/hiragana', async (req: Request, res: Response) => {
       exampleMeaning: h.exampleMeaning || undefined,
     }));
 
+    cache.set(cacheKey, result, TTL_STATIC);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
     res.json(result);
   } catch (err) {
     console.error('Get hiragana error:', err);
@@ -40,6 +51,14 @@ router.get('/hiragana', async (req: Request, res: Response) => {
 router.get('/katakana', async (req: Request, res: Response) => {
   try {
     const { type } = req.query;
+
+    const cacheKey = `katakana:${type ?? ''}`;
+    const cached = cache.get<object[]>(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
 
     const where: Record<string, unknown> = {};
     if (type) where.type = type as string;
@@ -62,6 +81,8 @@ router.get('/katakana', async (req: Request, res: Response) => {
       exampleMeaning: k.exampleMeaning || undefined,
     }));
 
+    cache.set(cacheKey, result, TTL_STATIC);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
     res.json(result);
   } catch (err) {
     console.error('Get katakana error:', err);

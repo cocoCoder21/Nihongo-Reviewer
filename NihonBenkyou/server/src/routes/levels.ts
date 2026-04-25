@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import { cache, TTL_STATIC } from '../lib/cache.js';
 
 const router = Router();
 
@@ -8,6 +9,13 @@ const router = Router();
 // GET /levels
 router.get('/', async (_req: Request, res: Response) => {
   try {
+    const cached = cache.get<object[]>('levels');
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
+
     const levels = await prisma.jlptLevel.findMany({
       orderBy: { order: 'desc' },
       include: {
@@ -31,6 +39,8 @@ router.get('/', async (_req: Request, res: Response) => {
       order: l.order,
     }));
 
+    cache.set('levels', result, TTL_STATIC);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
     res.json(result);
   } catch (err) {
     console.error('Get levels error:', err);
@@ -42,6 +52,14 @@ router.get('/', async (_req: Request, res: Response) => {
 router.get('/:level/lessons', async (req: Request, res: Response) => {
   try {
     const level = req.params.level as string;
+
+    const cacheKey = `lessons:${level}`;
+    const cached = cache.get<object[]>(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
 
     const books = await prisma.book.findMany({
       where: { jlptLevelId: level },
@@ -78,6 +96,8 @@ router.get('/:level/lessons', async (req: Request, res: Response) => {
       }));
     });
 
+    cache.set(cacheKey, lessons, TTL_STATIC);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
     res.json(lessons);
   } catch (err) {
     console.error('Get lessons error:', err);
@@ -90,6 +110,14 @@ router.get('/:level/vocabulary', async (req: Request, res: Response) => {
   try {
     const level = req.params.level as string;
     const { lesson } = req.query;
+
+    const cacheKey = `vocab:${level}:${lesson ?? ''}`;
+    const cached = cache.get<object[]>(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
 
     const where: Record<string, unknown> = { jlptLevelId: level };
     if (lesson) {
@@ -113,6 +141,8 @@ router.get('/:level/vocabulary', async (req: Request, res: Response) => {
       sourceBook: v.sourceBook || undefined,
     }));
 
+    cache.set(cacheKey, result, TTL_STATIC);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
     res.json(result);
   } catch (err) {
     console.error('Get vocabulary error:', err);
@@ -125,6 +155,14 @@ router.get('/:level/grammar', async (req: Request, res: Response) => {
   try {
     const level = req.params.level as string;
     const { lesson } = req.query;
+
+    const cacheKey = `grammar:${level}:${lesson ?? ''}`;
+    const cached = cache.get<object[]>(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
 
     const where: Record<string, unknown> = { jlptLevelId: level };
     if (lesson) {
@@ -161,6 +199,8 @@ router.get('/:level/grammar', async (req: Request, res: Response) => {
       };
     });
 
+    cache.set(cacheKey, result, TTL_STATIC);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
     res.json(result);
   } catch (err) {
     console.error('Get grammar error:', err);
@@ -173,6 +213,14 @@ router.get('/:level/kanji/categories', async (req: Request, res: Response) => {
   try {
     const level = req.params.level as string;
 
+    const cacheKey = `kanji-categories:${level}`;
+    const cached = cache.get<object[]>(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
+
     const categories = await prisma.kanji.groupBy({
       by: ['category'],
       where: { jlptLevelId: level, category: { not: '' } },
@@ -180,12 +228,13 @@ router.get('/:level/kanji/categories', async (req: Request, res: Response) => {
       orderBy: { category: 'asc' },
     });
 
-    res.json(
-      categories.map((c) => ({
-        name: c.category,
-        count: c._count.id,
-      })),
-    );
+    const result = categories.map((c) => ({
+      name: c.category,
+      count: c._count.id,
+    }));
+    cache.set(cacheKey, result, TTL_STATIC);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+    res.json(result);
   } catch (err) {
     console.error('Get kanji categories error:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -197,6 +246,14 @@ router.get('/:level/kanji', async (req: Request, res: Response) => {
   try {
     const level = req.params.level as string;
     const { category } = req.query;
+
+    const cacheKey = `kanji:${level}:${category ?? ''}`;
+    const cached = cache.get<object[]>(cacheKey);
+    if (cached) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+      res.json(cached);
+      return;
+    }
 
     const where: Record<string, unknown> = { jlptLevelId: level };
     if (category) {
@@ -235,6 +292,8 @@ router.get('/:level/kanji', async (req: Request, res: Response) => {
       })),
     }));
 
+    cache.set(cacheKey, result, TTL_STATIC);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
     res.json(result);
   } catch (err) {
     console.error('Get kanji error:', err);
