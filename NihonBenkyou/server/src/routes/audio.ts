@@ -1,7 +1,19 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 
 const router = Router();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function resolveAudioPath(filePathFromDb: string): string {
+  // Some older rows may include a leading slash (e.g. "/Audio/..."), which
+  // would force path.resolve to ignore the intended base directory.
+  const normalizedRelative = filePathFromDb.replace(/^[\\/]+/, '');
+  return path.resolve(__dirname, '..', '..', '..', '..', normalizedRelative);
+}
 
 // ─── GET /audio/by-book — list tracks by bookId + lessonNumber ────
 // Query params: bookId, lesson (number)
@@ -78,11 +90,12 @@ router.get('/stream/:bookId/:lesson/:track', async (req: Request, res: Response)
       return;
     }
 
-    const pathModule = await import('path');
-    const { fileURLToPath } = await import('url');
-    const __dirname = pathModule.dirname(fileURLToPath(import.meta.url));
-    // server/src/routes → 4 levels up to reach minna-no-nihongo-reviewer/
-    const audioPath = pathModule.resolve(__dirname, '..', '..', '..', '..', audioTrack.filePath);
+    const audioPath = resolveAudioPath(audioTrack.filePath);
+
+    if (!existsSync(audioPath)) {
+      res.status(404).json({ message: 'Audio file not found' });
+      return;
+    }
 
     res.sendFile(audioPath);
   } catch (err) {
@@ -192,10 +205,12 @@ router.get('/:lessonId/:track', async (req: Request, res: Response) => {
     }
 
     // Send the file — filePath is relative to project root
-    const path = await import('path');
-    const { fileURLToPath } = await import('url');
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    const audioPath = path.resolve(__dirname, '..', '..', '..', '..', track.filePath);
+    const audioPath = resolveAudioPath(track.filePath);
+
+    if (!existsSync(audioPath)) {
+      res.status(404).json({ message: 'Audio file not found' });
+      return;
+    }
 
     res.sendFile(audioPath);
   } catch (err) {
