@@ -82,6 +82,33 @@ const authLimiter = rateLimit({
 // Railway should only verify that the HTTP process is alive.
 // Do not block this route on database connectivity or it can cause
 // restart loops that surface as 502s for every request.
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    service: 'nihongo-reviewer-api',
+    status: 'ok',
+    health: '/api/health',
+  });
+});
+
+app.get('/api', (_req, res) => {
+  res.status(200).json({
+    service: 'nihongo-reviewer-api',
+    status: 'ok',
+    endpoints: [
+      '/api/health',
+      '/api/auth',
+      '/api/levels',
+      '/api/lessons',
+      '/api/radicals',
+      '/api/kana',
+      '/api/audio',
+      '/api/quiz',
+      '/api/user',
+      '/api/planner',
+    ],
+  });
+});
+
 app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });
 });
