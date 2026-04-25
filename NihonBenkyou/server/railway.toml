@@ -14,3 +14,19 @@ healthcheckPath = "/api/health"
 healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
+
+# ── Audio files ─────────────────────────────────────────────────────────────
+# Audio MP3s (~373 MB) are NOT in git (see root .gitignore).
+# They must be stored on a Railway Volume mounted to this service.
+#
+# Setup steps:
+#   1. Railway dashboard → this service → "Volumes" → add volume, mount at /audio
+#   2. Set env var  AUDIO_BASE_PATH=/audio  on this service
+#   3. Upload local Audio/ folder contents to the volume:
+#        railway run --service <service-name> -- bash -c \
+#          "mkdir -p /audio && cp -r /path/to/local/Audio /audio/"
+#      Or use:  railway volume upload  (Railway CLI ≥ 3.x)
+#
+# DB filePath values look like:  Audio/shokyu/shokyu_1/lesson_01/track_1.mp3
+# With AUDIO_BASE_PATH=/audio the server resolves: /audio/Audio/shokyu/...
+# ────────────────────────────────────────────────────────────────────────────

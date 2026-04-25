@@ -8,10 +8,31 @@ const router = Router();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function normalizeRelative(filePathFromDb: string): string {
+  return filePathFromDb.replace(/^[\\/]+/, '');
+}
+
+/**
+ * When AUDIO_CDN_BASE_URL is set (e.g. https://pub-xxx.r2.dev) the server
+ * redirects the client directly to the CDN instead of streaming locally.
+ * This is the recommended production mode for Railway where a local volume
+ * is not available.
+ */
+function resolveCdnUrl(filePathFromDb: string): string | null {
+  const base = process.env.AUDIO_CDN_BASE_URL?.replace(/\/+$/, '');
+  if (!base) return null;
+  return `${base}/${normalizeRelative(filePathFromDb)}`;
+}
+
 function resolveAudioPath(filePathFromDb: string): string {
-  // Some older rows may include a leading slash (e.g. "/Audio/..."), which
-  // would force path.resolve to ignore the intended base directory.
-  const normalizedRelative = filePathFromDb.replace(/^[\\/]+/, '');
+  const normalizedRelative = normalizeRelative(filePathFromDb);
+
+  // AUDIO_BASE_PATH lets a deployment point to a directory that holds Audio/.
+  if (process.env.AUDIO_BASE_PATH) {
+    return path.resolve(process.env.AUDIO_BASE_PATH, normalizedRelative);
+  }
+
+  // Local fallback: go up from dist/routes → dist → server → NihonBenkyou → repo root
   return path.resolve(__dirname, '..', '..', '..', '..', normalizedRelative);
 }
 
@@ -90,10 +111,18 @@ router.get('/stream/:bookId/:lesson/:track', async (req: Request, res: Response)
       return;
     }
 
+    // Prefer CDN redirect when AUDIO_CDN_BASE_URL is configured (e.g. Cloudflare R2)
+    const cdnUrl = resolveCdnUrl(audioTrack.filePath);
+    if (cdnUrl) {
+      res.redirect(302, cdnUrl);
+      return;
+    }
+
     const audioPath = resolveAudioPath(audioTrack.filePath);
 
     if (!existsSync(audioPath)) {
-      res.status(404).json({ message: 'Audio file not found' });
+      console.error(`[audio/stream/:bookId] File not found on disk. DB path: "${audioTrack.filePath}" → resolved: "${audioPath}" (AUDIO_BASE_PATH=${process.env.AUDIO_BASE_PATH ?? 'unset'})`);
+      res.status(404).json({ message: 'Audio file not found on server', resolvedPath: audioPath });
       return;
     }
 
@@ -204,11 +233,19 @@ router.get('/:lessonId/:track', async (req: Request, res: Response) => {
       return;
     }
 
+    // Prefer CDN redirect when AUDIO_CDN_BASE_URL is configured (e.g. Cloudflare R2)
+    const cdnUrl = resolveCdnUrl(track.filePath);
+    if (cdnUrl) {
+      res.redirect(302, cdnUrl);
+      return;
+    }
+
     // Send the file — filePath is relative to project root
     const audioPath = resolveAudioPath(track.filePath);
 
     if (!existsSync(audioPath)) {
-      res.status(404).json({ message: 'Audio file not found' });
+      console.error(`[audio/:lessonId/:track] File not found on disk. DB path: "${track.filePath}" → resolved: "${audioPath}" (AUDIO_BASE_PATH=${process.env.AUDIO_BASE_PATH ?? 'unset'})`);
+      res.status(404).json({ message: 'Audio file not found on server', resolvedPath: audioPath });
       return;
     }
 
