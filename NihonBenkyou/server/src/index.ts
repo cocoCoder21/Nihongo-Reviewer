@@ -40,16 +40,21 @@ const authLimiter = rateLimit({
   message: { message: 'Too many requests, please try again later' },
 });
 
-// ─── Health check ─────────────────────────────────────────────────
-// Always return 200 so Railway considers the deployment healthy.
-// DB status is reported in the body — a disconnected DB should not
-// take the server out of rotation (Railway would 502 all requests).
-app.get('/api/health', async (_req, res) => {
+// ─── Health checks ────────────────────────────────────────────────
+// Railway should only verify that the HTTP process is alive.
+// Do not block this route on database connectivity or it can cause
+// restart loops that surface as 502s for every request.
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
+
+// Separate DB diagnostics from the platform liveness probe.
+app.get('/api/health/db', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: 'ok', database: 'connected' });
+    res.status(200).json({ status: 'ok', database: 'connected' });
   } catch {
-    res.json({ status: 'ok', database: 'disconnected' });
+    res.status(200).json({ status: 'ok', database: 'disconnected' });
   }
 });
 
@@ -76,3 +81,4 @@ app.listen(PORT, () => {
 });
 
 export default app;
+
