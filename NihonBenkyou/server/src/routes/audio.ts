@@ -8,6 +8,25 @@ const router = Router();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// ─── In-memory cache for book name → UUID and track filePath lookups ─────────
+// TTL: 1 hour. Avoids repeated DB round-trips on every audio request.
+const TTL_MS = 60 * 60 * 1000;
+type CacheEntry<T> = { value: T; expiresAt: number };
+
+const bookIdCache = new Map<string, CacheEntry<string>>(); // bookName → UUID
+const trackCache = new Map<string, CacheEntry<string>>();  // "bookUUID:lesson:track" → filePath
+
+function getCached<T>(map: Map<string, CacheEntry<T>>, key: string): T | null {
+  const entry = map.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { map.delete(key); return null; }
+  return entry.value;
+}
+
+function setCached<T>(map: Map<string, CacheEntry<T>>, key: string, value: T): void {
+  map.set(key, { value, expiresAt: Date.now() + TTL_MS });
+}
+
 function normalizeRelative(filePathFromDb: string): string {
   return filePathFromDb.replace(/^[\\/]+/, '');
 }
@@ -93,35 +112,46 @@ router.get('/stream/:bookId/:lesson/:track', async (req: Request, res: Response)
       return;
     }
 
-    // bookId param is the book name (e.g. "shokyu_1"); resolve to UUID
-    const book = await prisma.book.findUnique({ where: { name: bookId } });
-    if (!book) {
-      res.status(404).json({ message: 'Book not found' });
-      return;
+    // bookId param is the book name (e.g. "shokyu_1"); resolve to UUID (cached)
+    let bookUuid = getCached(bookIdCache, bookId);
+    if (!bookUuid) {
+      const book = await prisma.book.findUnique({ where: { name: bookId } });
+      if (!book) {
+        res.status(404).json({ message: 'Book not found' });
+        return;
+      }
+      bookUuid = book.id;
+      setCached(bookIdCache, bookId, bookUuid);
     }
 
-    const audioTrack = await prisma.audioTrack.findUnique({
-      where: {
-        bookId_lessonNumber_trackNumber: { bookId: book.id, lessonNumber, trackNumber },
-      },
-    });
-
-    if (!audioTrack) {
-      res.status(404).json({ message: 'Track not found' });
-      return;
+    const trackKey = `${bookUuid}:${lessonNumber}:${trackNumber}`;
+    let filePath = getCached(trackCache, trackKey);
+    if (!filePath) {
+      const audioTrack = await prisma.audioTrack.findUnique({
+        where: {
+          bookId_lessonNumber_trackNumber: { bookId: bookUuid, lessonNumber, trackNumber },
+        },
+        select: { filePath: true },
+      });
+      if (!audioTrack) {
+        res.status(404).json({ message: 'Track not found' });
+        return;
+      }
+      filePath = audioTrack.filePath;
+      setCached(trackCache, trackKey, filePath);
     }
 
     // Prefer CDN redirect when AUDIO_CDN_BASE_URL is configured (e.g. Cloudflare R2)
-    const cdnUrl = resolveCdnUrl(audioTrack.filePath);
+    const cdnUrl = resolveCdnUrl(filePath);
     if (cdnUrl) {
       res.redirect(302, cdnUrl);
       return;
     }
 
-    const audioPath = resolveAudioPath(audioTrack.filePath);
+    const audioPath = resolveAudioPath(filePath);
 
     if (!existsSync(audioPath)) {
-      console.error(`[audio/stream/:bookId] File not found on disk. DB path: "${audioTrack.filePath}" → resolved: "${audioPath}" (AUDIO_BASE_PATH=${process.env.AUDIO_BASE_PATH ?? 'unset'})`);
+      console.error(`[audio/stream/:bookId] File not found on disk. DB path: "${filePath}" → resolved: "${audioPath}" (AUDIO_BASE_PATH=${process.env.AUDIO_BASE_PATH ?? 'unset'})`);
       res.status(404).json({ message: 'Audio file not found on server', resolvedPath: audioPath });
       return;
     }
