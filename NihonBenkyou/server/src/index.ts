@@ -20,14 +20,44 @@ import plannerRouter from './routes/planner.js';
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/+$/, '');
+}
+
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://nihongo-reviewer-eight.vercel.app',
+  'https://angeliephl.dev',
+];
+
+const allowedOrigins = new Set(
+  (process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(normalizeOrigin)
+    : defaultAllowedOrigins).filter(Boolean),
+);
+
 // ─── Middleware ────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(cors({
-  origin: process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-    : ['http://localhost:5173', 'http://localhost:5174'],
+  origin: (origin, callback) => {
+    // Allow non-browser requests (curl, health checks) with no Origin header.
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    const normalizedRequestOrigin = normalizeOrigin(origin);
+
+    if (allowedOrigins.has(normalizedRequestOrigin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(express.json());
