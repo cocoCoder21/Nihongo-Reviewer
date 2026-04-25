@@ -1,3 +1,5 @@
 # Audio files are large binary assets not needed by the server build.
 # Keep them locally but exclude from git to prevent Railway snapshot timeouts.
 Audio/
+.vercel
+.env*.local
