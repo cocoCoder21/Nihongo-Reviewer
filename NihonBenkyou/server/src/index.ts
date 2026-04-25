@@ -32,9 +32,12 @@ const defaultAllowedOrigins = [
 ];
 
 const allowedOrigins = new Set(
-  (process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map(normalizeOrigin)
-    : defaultAllowedOrigins).filter(Boolean),
+  [
+    ...defaultAllowedOrigins,
+    ...(process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map(normalizeOrigin)
+      : []),
+  ].filter(Boolean),
 );
 
 // ─── Middleware ────────────────────────────────────────────────────
