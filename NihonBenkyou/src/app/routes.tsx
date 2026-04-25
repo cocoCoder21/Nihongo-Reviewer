@@ -1,5 +1,5 @@
-// Injected by vite.config.ts via `define`. Points to /nihonbenkyou in
-// production (Vercel) and / everywhere else. Declared here to satisfy TS.
+// Injected by vite.config.ts via `define`. Defaults to / and can be
+// overridden for sub-path deployments. Declared here to satisfy TS.
 declare const __ROUTER_BASENAME__: string;
 
 import { createBrowserRouter } from "react-router";

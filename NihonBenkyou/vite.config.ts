@@ -4,12 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
 // Derive the router basename at build time using the same source of truth as
-// the Vite `base` option. VERCEL_ENV is set by Vercel on all builds, so it
-// works without any manual env-var configuration in the dashboard.
-const isVercelProd = process.env.VERCEL_ENV === 'production';
-const appBasePath = isVercelProd
-  ? (process.env.VITE_APP_BASE_PATH ?? '/nihonbenkyou/')
-  : '/';
+// the Vite `base` option. Default to root hosting; override only when needed.
+const appBasePath = process.env.VITE_APP_BASE_PATH ?? '/';
 // Router basename must NOT have a trailing slash (React Router convention)
 const routerBasename = appBasePath.replace(/\/$/, '') || '/';
 
@@ -27,10 +23,9 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
-  // Base path for the app. In production it is served under /nihonbenkyou/
-  // (proxied from angeliephl.dev). VERCEL_ENV guards against preview deploys
-  // inheriting the production base path and breaking asset resolution.
-  // Must end with a trailing slash.
+  // Base path for the app. Defaults to root (`/`) for direct hosting.
+  // Set VITE_APP_BASE_PATH only when deploying under a sub-path.
+  // Must end with a trailing slash when not root.
   base: appBasePath,
   define: {
     // Injected at build time so the router uses the same basename that Vite
