@@ -20,6 +20,11 @@ import plannerRouter from './routes/planner.js';
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
+// Railway sits behind a reverse proxy and forwards client IP information
+// via X-Forwarded-For. Trust the first proxy so express-rate-limit can
+// identify clients correctly and avoid ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set('trust proxy', 1);
+
 function normalizeOrigin(origin: string): string {
   return origin.trim().replace(/\/+$/, '');
 }
